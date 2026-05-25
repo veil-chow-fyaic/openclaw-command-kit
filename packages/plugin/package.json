@@ -1,14 +1,24 @@
 {
   "name": "@openclaw-commands/openclaw-command-kit",
   "version": "0.1.0",
-  "private": true,
   "description": "OpenClaw extension plugin providing /sessions and /resume commands.",
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@openclaw-commands/core": "*"

@@ -14,6 +14,14 @@
     "check": "npm run check --workspaces",
     "lint": "tsc --noEmit"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openclaw-command-kit/openclaw-command-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/openclaw-command-kit/openclaw-command-kit/issues"
+  },
+  "homepage": "https://github.com/openclaw-command-kit/openclaw-command-kit#readme",
   "devDependencies": {
     "typescript": "^5.4.0",
     "vitest": "^1.6.0",
