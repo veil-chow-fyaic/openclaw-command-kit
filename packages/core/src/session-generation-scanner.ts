@@ -4,6 +4,7 @@
 
 import { createReadStream } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import type { RouteScope } from './types.js';
@@ -29,7 +30,8 @@ export interface ScanOptions {
 
 export async function scanGenerations(options: ScanOptions): Promise<GenerationInfo[]> {
   const { agentId, route, currentSessionId, maxScanLinesPerFile = 500, activeTitle } = options;
-  const sessionsDir = join(process.env.HOME || process.env.USERPROFILE || '', '.openclaw', 'agents', agentId, 'sessions');
+  const sessionsDir =
+    process.env.OPENCLAW_SESSIONS_DIR || join(homedir(), '.openclaw', 'agents', agentId, 'sessions');
 
   let entries: string[];
   try {

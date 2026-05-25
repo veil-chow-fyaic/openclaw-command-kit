@@ -15,16 +15,16 @@ function makeEventWithStringContent(role: string, text: string, timestamp?: stri
 
 describe('scanGenerations', () => {
   let tempDir: string;
-  let originalHome: string | undefined;
+  let originalSessionsDir: string | undefined;
 
   beforeEach(() => {
-    originalHome = process.env.HOME;
+    originalSessionsDir = process.env.OPENCLAW_SESSIONS_DIR;
     tempDir = mkdtempSync(join(tmpdir(), 'oc-test-'));
-    process.env.HOME = tempDir;
+    process.env.OPENCLAW_SESSIONS_DIR = join(tempDir, '.openclaw', 'agents', 'main', 'sessions');
   });
 
   afterEach(() => {
-    process.env.HOME = originalHome;
+    process.env.OPENCLAW_SESSIONS_DIR = originalSessionsDir;
     rmSync(tempDir, { recursive: true, force: true });
   });
 

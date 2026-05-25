@@ -3,6 +3,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
+import { homedir } from 'node:os';
 import type { GatewayClient } from './gateway-client.js';
 import type { SessionHistoryService } from './session-history-service.js';
 import type { ActorScope, RouteScope, RestoreResult, ResumeListItem } from './types.js';
@@ -11,7 +12,7 @@ export class RestoreService {
   constructor(
     private gateway: GatewayClient,
     private history: SessionHistoryService,
-    private sessionsDir: string = path.join(process.env.HOME ?? '', '.openclaw/agents/main/sessions')
+    private sessionsDir: string = process.env.OPENCLAW_SESSIONS_DIR || path.join(homedir(), '.openclaw/agents/main/sessions')
   ) {}
 
   async restoreSession(
@@ -106,7 +107,7 @@ export class RestoreService {
     for (const storeKey of existingKeys) {
       const entry = { ...store[storeKey] };
       entry.sessionId = item.sessionId;
-      entry.sessionFile = targetFilePath;
+      entry.sessionFile = targetFileName;
       entry.updatedAt = now;
       store[storeKey] = entry;
     }
@@ -153,6 +154,13 @@ export class RestoreService {
     for (const key of [rawKey, `agent:${agentId}:${rawKey}`]) {
       if (key && !keys.includes(key)) {
         keys.push(key);
+      }
+    }
+    // Also include the raw key without agent: prefix if sessionKey uses that form
+    if (rawKey && rawKey.startsWith('agent:')) {
+      const stripped = rawKey.split(':', 2)[1] || '';
+      if (stripped && !keys.includes(stripped)) {
+        keys.push(stripped);
       }
     }
     return keys;
