@@ -1,0 +1,8 @@
+{
+  "id": "openclaw-command-kit",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

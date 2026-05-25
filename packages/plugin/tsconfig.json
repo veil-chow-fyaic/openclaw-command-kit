@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "paths": {
+      "openclaw/plugin-sdk": ["/opt/homebrew/lib/node_modules/openclaw/dist/plugin-sdk/index.d.ts"],
+      "openclaw/plugin-sdk/plugins/types": ["/opt/homebrew/lib/node_modules/openclaw/dist/plugin-sdk/plugins/types.d.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "**/*.test.ts"]
+}
