@@ -46,15 +46,17 @@ Do not try to generalize this across Claude Code, Codex CLI, Gemini CLI, or othe
 
 The first useful version should implement:
 
-1. Resolve the current route scope from the inbound OpenClaw channel context.
-2. List sessions under that exact scope.
-3. Return a compact numbered list to the user.
-4. Accept `/resume <number>` to switch.
-5. Return a clear confirmation message after switching.
+1. Resolve the current actor from trusted OpenClaw channel context.
+2. Resolve the current route scope from the inbound message.
+3. List sessions under that actor-authorized exact route scope.
+4. Return a compact numbered list to the user.
+5. Accept `/resume <number>` to switch.
+6. Return a clear confirmation message after switching.
 
 ## Safety
 
 - Never search globally across all users before route scope is resolved.
+- Never list sessions before actor identity is resolved.
 - Never infer ownership from display names alone.
 - Never persist duplicate session mappings.
 - Fail closed when scope is missing or ambiguous.

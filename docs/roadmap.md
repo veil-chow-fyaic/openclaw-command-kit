@@ -12,6 +12,8 @@ Status: current.
 
 ## Phase 1: Native Session Commands
 
+Status: implemented as OpenClaw Extension Plugin (`packages/plugin/`).
+
 Deliver:
 
 - `/sessions`
@@ -21,10 +23,17 @@ Deliver:
 Requirements:
 
 - scoped to current route;
+- scoped to current actor;
 - no global/fuzzy matches;
+- no bare numeric reply switching;
 - no raw ids in normal output;
 - read-back confirmed restore;
 - friendly chat messages.
+
+Implementation:
+- `packages/core/` — channel-agnostic services (`SessionHistoryService`, `RestoreService`, `CommandRouter`)
+- `packages/plugin/` — OpenClaw Extension Plugin using `plugin-sdk` `registerCommand()` API
+- Reverse-lookup `RouteScope` via `sessions.list` RPC since `PluginCommandContext` lacks `sessionKey`
 
 ## Phase 2: Query Filtering
 
@@ -65,8 +74,9 @@ Adapt formatting and route resolution for:
 
 ## Open Decisions
 
-- Should `/resume` support implicit numeric reply after showing a list?
+- Should `/resume` support implicit numeric reply after showing a list in a
+  later phase? MVP answer: no; require `/resume N`.
 - Should `/sessions 2` ever switch, or remain read-only forever?
 - Should `/resume last` be allowed in MVP?
 - Should command output include context usage by default?
-- Should this become an OpenClaw upstream PR or a plugin first?
+- ~~Should this become an OpenClaw upstream PR or a plugin first?~~ Decided: Extension Plugin via `plugin-sdk` `registerCommand()`. No source modification required.

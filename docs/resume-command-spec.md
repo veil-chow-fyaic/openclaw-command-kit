@@ -17,18 +17,47 @@ MVP commands:
 
 - `session_key`: route identity, for example a WeCom direct-chat route.
 - `session_id`: concrete historical generation under the route.
+- `actor`: the current trusted command issuer from channel context.
 - `current generation`: the active generation for the route.
 - `historical generation`: a restorable prior generation under the same route.
 
 ## Safety Rules
 
 - Only list sessions under the current inbound route.
+- Resolve the current actor before listing or restoring.
 - Direct chat and group chat must never mix.
 - Organization/account must be part of the route.
 - Do not return global recent sessions.
 - Do not switch by display name alone.
+- Do not let one user complete another user's picker.
 - Do not report success unless read-back confirms the route points to the
   selected generation.
+
+## Scope Inputs
+
+`/sessions`, `/resume`, and `/resume N` require:
+
+- trusted actor identity, such as `SenderId`;
+- provider/channel;
+- account id when the channel has multiple accounts;
+- organization/workspace/team when the provider supports it;
+- chat type, at least `direct`, `group`, or `thread`;
+- current route `sessionKey`;
+- stable conversation or thread identity when available.
+
+For WeCom, the safe boundary is:
+
+```text
+SenderId
++ AccountId
++ OriginatingOrganization
++ ChatType
++ SessionKey
++ ConversationLabel only after route metadata confirms it
+```
+
+`SenderName` and `ConversationLabel` are display fields. They may improve
+formatting, but they are not authorization by themselves.
 
 ## `/sessions`
 
@@ -55,23 +84,28 @@ Formatting constraints:
 Without arguments, same output as `/sessions` plus stronger instruction:
 
 ```text
-回复 /resume 2 切换到第 2 个历史对话。
+发送 /resume 2 切换到第 2 个历史对话。
 ```
 
 Do not enter implicit "reply 2" mode in MVP. Requiring the command prefix avoids
 accidental control from normal chat messages.
+
+In a group chat, the list is visible to the channel. Keep it compact and avoid
+debug identifiers. Selection still requires an explicit `/resume N` command from
+an authorized actor.
 
 ## `/resume N`
 
 Algorithm:
 
 1. Build the route scope from the current inbound message.
-2. List current + historical generations for that route.
-3. Map `N` to the displayed list item.
-4. Validate selected `session_id` belongs to the route.
-5. Restore `sessionId/sessionFile`.
-6. Read back current route through Gateway/session API.
-7. Reply success or fail closed.
+2. Build the actor scope from trusted channel context.
+3. List current + historical generations for that actor and route.
+4. Map `N` to the freshly computed displayed list item.
+5. Validate selected `session_id` belongs to the actor-authorized route.
+6. Restore `sessionId/sessionFile`.
+7. Read back current route through Gateway/session API.
+8. Reply success or fail closed.
 
 ## Error Responses
 
@@ -79,6 +113,18 @@ No sessions:
 
 ```text
 当前聊天还没有可恢复的历史对话。
+```
+
+Missing actor:
+
+```text
+无法确认当前用户身份，已拒绝查看历史对话。
+```
+
+Missing route:
+
+```text
+无法确认当前聊天范围，已拒绝查看历史对话。
 ```
 
 Invalid number:
@@ -123,7 +169,11 @@ only after exact route scope is already enforced.
 
 - `/sessions` in one direct chat never lists another direct chat.
 - `/sessions` in group chat never lists direct chat.
+- `/sessions` fails closed when actor identity is missing.
+- Two actors with similar display names do not see each other's direct-chat
+  sessions.
 - `/resume 2` switches to the selected generation.
+- Bare `2` after `/resume` does not switch in MVP.
 - After `/resume 2`, the next user message can reference the selected history.
 - `/new` after `/resume 2` creates a fresh generation for the same route.
 - Invalid numbers do not mutate route state.

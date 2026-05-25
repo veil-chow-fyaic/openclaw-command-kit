@@ -32,7 +32,7 @@ Response:
 2. B端切换验收 testing-b
    5月21日 19:31 · 最后：收到，测试正常
 
-回复 /resume 2 切换。
+发送 /resume 2 切换。仅回复 2 不会触发切换。
 ```
 
 ### `/resume`
@@ -43,6 +43,7 @@ Purpose:
 
 - Show the same list as `/sessions`.
 - Tell the user how to switch.
+- Require an explicit `/resume N` command instead of bare numeric replies.
 
 Example:
 

@@ -7,8 +7,14 @@ native chat commands without duplicating OpenClaw storage.
 
 ## Preferred Integration Point
 
-The command should live near OpenClaw native slash-command handling, because it
-must work in any chat channel where OpenClaw receives a message.
+The commands are implemented as an **OpenClaw Extension Plugin** using the
+`openclaw/plugin-sdk` `registerCommand()` API. This provides:
+
+- Native slash-command feel in any channel (WeCom, Telegram, Slack, Discord, WebChat, etc.)
+- Execution before built-in commands and LLM dispatch
+- Automatic reply delivery back through the same channel
+- No modification to OpenClaw source code or compiled `dist/`
+- Independent packaging and distribution via npm
 
 It should not depend on:
 
@@ -24,7 +30,17 @@ channel runtime context.
 
 ## Core Components
 
-### Command Router
+### Extension Plugin (`packages/plugin/`)
+
+Thin glue layer between OpenClaw's `plugin-sdk` and the channel-agnostic `core`.
+
+- `index.ts` — Exports `OpenClawPluginDefinition`; calls `api.registerCommand()` for `sessions` and `resume`
+- `scope-deriver.ts` — Reverse-lookup `ActorScope` + `RouteScope` from `PluginCommandContext` via `sessions.list` RPC
+- `command-handlers.ts` — Wraps core services; handles `/sessions`, `/resume`, `/resume N`
+
+The plugin receives `PluginCommandContext` which contains `senderId`, `channel`, `to`, `accountId`, `messageThreadId` but **no `sessionKey` or `organization`**. It reverse-lookups these by matching `deliveryContext` metadata from `sessions.list`.
+
+### Command Router (`packages/core/`)
 
 Parses:
 
@@ -33,8 +49,7 @@ Parses:
 - `/resume`
 - `/resume <number|query>`
 
-The router must preserve existing OpenClaw commands such as `/new`, `/reset`,
-`/status`, and `/compact`.
+The router must preserve existing OpenClaw commands such as `/new`, `/reset`, `/status`, and `/compact`.
 
 ### Route Scope Resolver
 
@@ -65,11 +80,34 @@ interface RouteScope {
 }
 ```
 
+### Actor Scope Resolver
+
+Builds the current command issuer from trusted channel context.
+
+```ts
+interface ActorScope {
+  provider: string;
+  accountId?: string;
+  organization?: string;
+  senderId: string;
+  senderDisplayName?: string;
+}
+```
+
+Actor scope is required for command authorization and future interaction state.
+It must not be derived from display names alone. In group chats, actor scope
+prevents a later pending picker from being completed by a different sender. In
+direct chats, actor scope protects cases where multiple enterprise users can see
+similar external contacts or labels.
+
+If actor or route scope is missing, the command layer should return a clear
+fail-closed response before any session listing or search.
+
 ### Session History Service
 
 Responsibilities:
 
-- list current + historical generations under a route;
+- list current + historical generations under an actor-authorized route;
 - build safe display summaries;
 - expose only authorized scoped results;
 - hide raw ids by default.
@@ -97,6 +135,7 @@ interface ResumeListItem {
   index: number;
   sessionId: string;
   sessionKey: string;
+  actorId?: string;
   title: string;
   updatedAt?: string;
   preview?: string;
@@ -114,20 +153,24 @@ interface ResumeListItem {
 
 This repository: docs and shared design.
 
-### Phase 1: Native MVP
+### Phase 1: Core Library
 
-Implement inside OpenClaw command handling:
+Implement channel-agnostic core in `packages/core/`:
 
-- `/sessions`
-- `/resume`
-- `/resume N`
+- `GatewayClient` — typed wrapper for `openclaw gateway call`
+- `ActorScopeResolver` / `RouteScopeResolver` — fail-closed scope validation
+- `SessionHistoryService` — scoped session listing
+- `RestoreService` — session restore with read-back confirmation
+- `ResponseFormatter` — Chinese reply formatting
+- `CommandRouter` — parse `/sessions`, `/resume`, `/resume N`
 
-Use current Gateway/session primitives and the proven bridge restore strategy.
+### Phase 2: Extension Plugin
 
-### Phase 2: Shared Library
+Implement OpenClaw extension plugin in `packages/plugin/`:
 
-Extract route-scoped list/restore helpers so channel integrations and control UI
-can reuse the same semantics.
+- `scope-deriver.ts` — reverse-lookup scopes from `PluginCommandContext`
+- `command-handlers.ts` — delegate to core services
+- `index.ts` — `OpenClawPluginDefinition` with `registerCommand()` calls
 
 ### Phase 3: Search And Interaction
 
@@ -141,7 +184,10 @@ Add:
 ## Security Notes
 
 - A session list is sensitive. Never return sessions outside the current route.
+- The current actor must be resolved before any list or restore operation.
 - Display labels are not authorization.
 - Query search must happen after scoped filtering.
 - Numeric selection must be resolved from a freshly computed scoped list.
+- MVP should not interpret bare numeric replies as picker selections.
+- Any future pending picker must be keyed by actor and route.
 - Success requires route read-back confirmation.

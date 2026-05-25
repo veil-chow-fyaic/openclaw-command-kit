@@ -25,6 +25,21 @@ This repository is for OpenClaw-specific, channel-agnostic slash-command enhance
 - DRY: centralize command parsing, scope resolution, and session formatting.
 - Fail closed on missing or ambiguous route scope.
 
+## Execution Plan
+
+See `docs/implementation-plan.md` for the full phased plan.
+
+See `docs/loop-runbook.md` for the **/unattended loop execution guide** — this is the primary task list for the loop agent.
+
+See `docs/security-contract.md` for the **non-negotiable safety rules** — every implementation must satisfy every rule.
+
+Key decisions:
+- **No upstream PR** (OpenClaw source not cloned locally; compiled `dist/` only).
+- **Extension Plugin approach**: use `openclaw/plugin-sdk` `OpenClawPluginApi.registerCommand()` to register `/sessions` and `/resume` as native extension commands. These bypass LLM processing and are evaluated before built-in commands. No per-channel adapter or monitor interception is required.
+- **Core services are channel-agnostic**: actor/route resolvers, session history, restore service, response formatter live in `packages/core/`.
+- **Plugin reverse-lookup**: `PluginCommandContext` lacks `sessionKey` and `organization`, so the plugin reverse-lookups them via `sessions.list` RPC by matching `deliveryContext` metadata.
+- **Reference implementation**: B-bridge (`../openclaw-session-bridge/app/adapters.py`) already proves the exact restore algorithm via `sessions.json` mutation + `chat.history` read-back.
+
 ## Initial Commands
 
 - `/sessions`: read-only current-scope session list.
