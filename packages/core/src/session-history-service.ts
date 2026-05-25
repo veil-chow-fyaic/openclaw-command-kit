@@ -52,7 +52,7 @@ export class SessionHistoryService {
     // Scan local transcript backups for historical generations
     const historicalItems: ResumeListItem[] = [];
     if (route.label && activeItems.length > 0) {
-      const activeSessionIds = new Set(activeItems.map((i) => i.sessionId));
+      const seenSessionIds = new Set(activeItems.map((i) => i.sessionId));
       const activeTitle = activeItems[0]?.title || route.label;
       try {
         const generations = await scanGenerations({
@@ -63,7 +63,8 @@ export class SessionHistoryService {
           activeTitle,
         });
         for (const gen of generations) {
-          if (activeSessionIds.has(gen.sessionId)) continue;
+          if (seenSessionIds.has(gen.sessionId)) continue;
+          seenSessionIds.add(gen.sessionId);
           historicalItems.push({
             displayIndex: 0,
             sessionId: gen.sessionId,
