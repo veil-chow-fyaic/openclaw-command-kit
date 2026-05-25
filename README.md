@@ -3,34 +3,13 @@
 OpenClaw Command Kit is a channel-agnostic extension plugin that provides native
 OpenClaw chat commands for session history and resume.
 
-The first target commands are:
+## Commands
 
-- `/sessions`: list scoped conversation history.
-- `/resume`: show resumable conversations for the current chat route.
-- `/resume 2`: switch to the second conversation from the current scoped list.
-
-This project is OpenClaw-specific and channel-agnostic. It is not a WeCom Side
-Panel project, not a bridge-local session store, and not a universal session
-manager for unrelated agents such as Claude Code or Codex CLI. It is a reusable
-native OpenClaw extension plugin that works across WeCom, Telegram, Slack,
-WebChat, Discord, and other channels without per-channel integration code.
-
-## TLDR
-
-- OpenClaw already has `/new`, `/reset`, `/status`, `/compact`, `/think`,
-  `/verbose`, `/usage`, `/restart`, and `/activation`.
-- OpenClaw also has `openclaw sessions` and Gateway session RPCs such as
-  `sessions.list`, `sessions.preview`, `sessions.describe`, `sessions.resolve`,
-  `sessions.reset`, `sessions.get`, and `chat.history`.
-- The missing user-facing layer is a safe native command flow for history list,
-  selection, and verified session restore.
-- `/resume` is the recommended primary command name because it matches user
-  intent better than `/switch-session`.
-- MVP should be numeric and scoped: `/sessions`, `/resume`, `/resume 2`.
-- The command must resolve both the current actor and the current chat route
-  before returning any session list.
-- Natural language search such as `/resume 昨天` or `/resume 腾讯文档` should be
-  phase 2, after exact route-scoped authorization is stable.
+| Command | Description |
+|---------|-------------|
+| `/sessions` | List current and historical sessions for the current chat route. |
+| `/resume` | Show the session list (same as `/sessions`). |
+| `/resume N` | Switch to the N-th session in the list. |
 
 ## Architecture
 
@@ -48,21 +27,13 @@ OpenClaw Core Dispatch
   |
   v
 [Core: Command Router] (channel-agnostic)
-  |-- /sessions  --> [Core: Session History Service] --> [Core: Response Formatter]
-  |-- /resume    --> [Core: Session History Service] --> [Core: Response Formatter]
-  |-- /resume N  --> [Core: Restore Service] --> [Core: Response Formatter]
+  |-- /sessions  --> SessionHistoryService --> ResponseFormatter
+  |-- /resume    --> SessionHistoryService --> ResponseFormatter
+  |-- /resume N  --> RestoreService        --> ResponseFormatter
   |
   v
 OpenClaw Core Dispatch (delivers reply back through same channel)
 ```
-
-The repository has two layers:
-
-1. **`packages/core/`** — Channel-agnostic core services. Zero OpenClaw or
-   channel dependencies. Exported as `@openclaw-commands/core`.
-2. **`packages/plugin/`** — OpenClaw Extension Plugin. Uses `plugin-sdk` to
-   register `/sessions` and `/resume` commands, delegating to `core` services.
-   Exported as `@openclaw-commands/plugin`.
 
 ## Installation
 
@@ -74,53 +45,66 @@ cd openclaw-command-kit
 npm install
 npm run build
 
-# Symlink plugin package (contains package.json + openclaw.plugin.json) into OpenClaw extensions
+# Symlink plugin into OpenClaw extensions
 ln -s $(pwd)/packages/plugin ~/.openclaw/extensions/openclaw-command-kit
 ```
 
-Then add the plugin to your `~/.openclaw/openclaw.json`:
+Add to `~/.openclaw/openclaw.json`:
 
 ```json
 {
   "plugins": {
-    "allow": [
-      "wecom",
-      "openclaw-command-kit"
-    ],
+    "allow": ["wecom", "openclaw-command-kit"],
     "load": {
-      "paths": [
-        "/Users/yourname/.openclaw/extensions/openclaw-command-kit"
-      ]
+      "paths": ["/Users/yourname/.openclaw/extensions/openclaw-command-kit"]
     },
     "entries": {
-      "openclaw-command-kit": {
-        "enabled": true
-      }
+      "openclaw-command-kit": { "enabled": true }
     }
   }
 }
 ```
 
-Restart OpenClaw gateway for the plugin to load.
+Restart OpenClaw gateway:
 
-### npm Global Install
+```bash
+launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway
+```
+
+### Production / npm Global Install
 
 ```bash
 npm install -g @openclaw-commands/openclaw-command-kit
 ```
 
-After install, add the plugin to `~/.openclaw/openclaw.json` `plugins.allow` and `plugins.load.paths` as shown above, then restart OpenClaw.
+Reference it in `~/.openclaw/openclaw.json` and restart the gateway as above.
 
-## Current References
+## Build & Test
+
+```bash
+# Build all workspace packages
+npm run build
+
+# Run all tests
+npm run test:run
+
+# Type check without emitting
+npm run lint
+```
+
+## Upgrading
+
+After pulling or rebuilding:
+
+1. Run `npm run build`
+2. **Restart OpenClaw gateway** so the new compiled JS is loaded into the process.
+
+## Documentation
 
 - [TLDR](docs/tldr.md)
-- [Agent task brief](docs/agent-task-brief.md)
-- [Research notes](docs/research-notes.md)
-- [Prior art and community research](docs/prior-art.md)
+- [Architecture](docs/architecture.md)
 - [Command catalog](docs/command-catalog.md)
 - [Resume command spec](docs/resume-command-spec.md)
-- [Channel interaction and identity](docs/channel-interaction.md)
-- [Architecture](docs/architecture.md)
 - [Implementation plan](docs/implementation-plan.md)
 - [Roadmap](docs/roadmap.md)
 
@@ -139,15 +123,6 @@ After install, add the plugin to `~/.openclaw/openclaw.json` `plugins.allow` and
 
 The `openclaw-session-bridge` project proved the route-level session list,
 new-session, switch, and confirmation semantics through A/B HTTP APIs.
-
-Important prior work:
-
-- Native command design from B:
-  `/Users/fuyo-aic/projects/openclaw-session-bridge/docs/native-session-command-design.md`
-- A, WeCom Side Panel:
-  https://github.com/veil-chow-fyaic/wecom-sidepanel-probe
-- B, OpenClaw session bridge:
-  https://github.com/veil-chow-fyaic/openclaw-session-bridge
 
 This project abstracts that learning into an OpenClaw extension plugin. The end
 state lives inside OpenClaw's own plugin system and Gateway session services,

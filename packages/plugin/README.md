@@ -4,9 +4,11 @@ OpenClaw extension plugin providing native session commands.
 
 ## Commands
 
-- `/sessions` – list current and historical sessions for the current chat route.
-- `/resume` – show the session list (same as `/sessions`).
-- `/resume N` – switch to the N-th session in the list.
+| Command | Description |
+|---------|-------------|
+| `/sessions` | List current and historical sessions for the current chat route. |
+| `/resume` | Show the session list (same as `/sessions`). |
+| `/resume N` | Switch to the N-th session in the list. |
 
 ## Install
 
@@ -16,13 +18,7 @@ Place this package in `~/.openclaw/extensions/openclaw-command-kit/` or install 
 npm install -g @openclaw-commands/openclaw-command-kit
 ```
 
-Then reference it in your `openclaw.json`:
-
-```json
-{
-  "extensions": ["@openclaw-commands/openclaw-command-kit"]
-}
-```
+Then reference it in your `openclaw.json` and restart the OpenClaw gateway.
 
 ## Requirements
 
