@@ -153,11 +153,12 @@ async function summarizeGenerationFile(
   const lastAssistant = assistantMessages[assistantMessages.length - 1]?.text || '';
   const lastPreview = lastAssistant || lastUser;
 
-  const titleSeed = userMessages[userMessages.length - 1]?.text || '';
+  const rawTitleSeed = userMessages[userMessages.length - 1]?.text || '';
+  const titleSeed = truncate(rawTitleSeed, 28);
   let title: string;
   if (activeTitle) {
     const suffix = titleSeed && titleSeed !== activeTitle ? titleSeed : '历史';
-    title = `${activeTitle} · ${suffix}`;
+    title = truncate(`${activeTitle} · ${suffix}`, 50);
   } else {
     title = titleSeed || '未命名对话';
   }
@@ -276,4 +277,10 @@ async function fileMtime(filePath: string): Promise<Date> {
   } catch {
     return new Date();
   }
+}
+
+function truncate(text: string, maxLen: number): string {
+  const cleaned = text.replace(/\r?\n/g, ' ').trim();
+  if (cleaned.length <= maxLen) return cleaned;
+  return cleaned.slice(0, maxLen) + '…';
 }

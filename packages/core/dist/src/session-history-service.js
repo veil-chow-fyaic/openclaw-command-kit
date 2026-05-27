@@ -27,15 +27,19 @@ export class SessionHistoryService {
         });
         // Enrich active session preview from chat.history
         if (activeItems.length > 0) {
-            try {
-                const chat = await this.gateway.chatHistory({ sessionKey: route.sessionKey, limit: 3 });
+            let enriched = false;
+            const tryEnrich = async (sessionKey) => {
+                const chat = await this.gateway.chatHistory({ sessionKey, limit: 3 });
                 const msgs = chat.messages ?? [];
                 const textMsgs = [];
                 for (const m of msgs) {
                     if (!m || typeof m !== 'object')
                         continue;
                     const role = String(m.role || '');
-                    const text = extractMessageText(m).trim();
+                    let text = extractMessageText(m).trim();
+                    if (role === 'user') {
+                        text = cleanUserMessage(text);
+                    }
                     if ((role === 'user' || role === 'assistant') && text) {
                         textMsgs.push({ role, text: shortenText(text, 72) });
                     }
@@ -48,9 +52,25 @@ export class SessionHistoryService {
                     item.lastUserMessage = lastUser || undefined;
                     item.lastAssistantMessage = lastAssistant || undefined;
                 }
+                enriched = true;
+            };
+            try {
+                await tryEnrich(route.sessionKey);
             }
-            catch {
-                // Fail-open: active sessions display without preview
+            catch (err) {
+                // Fallback: try with the active sessionId as key
+                const fallbackKey = activeItems[0]?.sessionId;
+                if (fallbackKey && fallbackKey !== route.sessionKey) {
+                    try {
+                        await tryEnrich(fallbackKey);
+                    }
+                    catch (err2) {
+                        console.error('[session-history-service] chatHistory enrichment failed for both keys:', err, err2);
+                    }
+                }
+                else {
+                    console.error('[session-history-service] chatHistory enrichment failed:', err);
+                }
             }
         }
         // Scan local transcript backups for historical generations
@@ -177,5 +197,26 @@ function shortenText(text, limit) {
     if (cleaned.length <= limit)
         return cleaned;
     return cleaned.slice(0, limit) + '…';
+}
+function cleanUserMessage(text) {
+    let value = text.trim();
+    // Strip the OpenClaw metadata envelope that precedes the real user message.
+    if (value.includes('```')) {
+        const parts = value.split('```');
+        if (value.includes('Sender (untrusted metadata):') && parts.length >= 4) {
+            value = parts.slice(4).join('```').trim();
+        }
+        else if ((value.includes('Conversation info') || value.includes('untrusted metadata')) &&
+            parts.length >= 3) {
+            value = parts.slice(2).join('```').trim();
+        }
+    }
+    if (value.startsWith('[media attached:')) {
+        return '[图片]';
+    }
+    if (value.startsWith('[Queued messages while agent was busy]')) {
+        return '[排队消息]';
+    }
+    return value;
 }
 //# sourceMappingURL=session-history-service.js.map

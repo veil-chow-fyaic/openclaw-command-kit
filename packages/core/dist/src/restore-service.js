@@ -89,12 +89,12 @@ export class RestoreService {
                 }
             }
         }
-        const now = Date.now();
+        const restoredUpdatedAt = item.updatedAt.getTime();
         for (const storeKey of existingKeys) {
             const entry = { ...store[storeKey] };
             entry.sessionId = item.sessionId;
             entry.sessionFile = targetFileName;
-            entry.updatedAt = now;
+            entry.updatedAt = restoredUpdatedAt;
             store[storeKey] = entry;
         }
         // Atomic write with backup
