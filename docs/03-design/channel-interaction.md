@@ -94,10 +94,10 @@ Recommended `/resume` response:
 当前：周威 · 刚刚 · 新对话
 
 1. 腾讯文档发布不了
-   5月23日 09:36 · 最后：看起来 gog 的 OAuth token 过期了...
+   看起来 gog 的 OAuth token 过期了... · 5月23日 09:36
 
 2. B端切换验收 testing-b
-   5月21日 19:31 · 最后：收到，测试正常
+   收到，测试正常 · 5月21日 19:31
 
 发送 /resume 2 切换到第 2 个历史对话。
 ```
@@ -140,6 +140,10 @@ Success response:
 
 对话：B端切换验收 testing-b
 时间：5月21日 19:31
+
+最近聊到了：
+你：testing-b 这个分支测试怎么样
+OpenClaw：收到，测试正常
 
 后续消息将进入这个上下文。
 ```

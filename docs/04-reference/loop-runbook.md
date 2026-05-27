@@ -4,9 +4,9 @@ This document is the primary execution guide for `/unattended loop`. Read this f
 
 ## Start Here
 
-1. Read `docs/implementation-plan.md` for architecture context.
-2. Read `docs/security-contract.md` — every rule is mandatory.
-3. Read `docs/agent-task-brief.md` for product requirements.
+1. Read `docs/03-design/implementation-plan.md` for architecture context.
+2. Read `docs/03-design/security-contract.md` — every rule is mandatory.
+3. Read `docs/04-reference/agent-task-brief.md` for product requirements.
 4. Read B-bridge reference: `../openclaw-session-bridge/app/adapters.py` (focus on `GatewayOpenClawAdapter` methods).
 5. Your working directory: `/Users/fuyo-aic/Projects/openclaw-command-kit/`
 
@@ -59,7 +59,7 @@ npx vitest run packages/core/tests/gateway-client.test.ts   # must pass
   - Derive title/preview from transcript (port `_enrich_session_from_history` from B-bridge)
   - Expose display indexes only
 - Implement `response-formatter.ts`:
-  - Format Chinese text per `docs/command-catalog.md` examples
+  - Format Chinese text per `docs/02-commands/command-catalog.md` examples
   - Empty list -> `当前聊天还没有可恢复的历史对话。`
 - Wire `CommandRouter`:
   - Route `/sessions` -> `SessionHistoryService` -> `ResponseFormatter`
@@ -185,11 +185,11 @@ npx vitest run packages/core/tests/gateway-client.test.ts   # must pass
 
 | Purpose | Path |
 |---|---|
-| Agent brief (source of truth) | `docs/agent-task-brief.md` |
-| Security rules (mandatory) | `docs/security-contract.md` |
-| Implementation plan | `docs/implementation-plan.md` |
-| Command examples | `docs/command-catalog.md` |
-| Architecture doc | `docs/architecture.md` |
+| Agent brief (source of truth) | `docs/04-reference/agent-task-brief.md` |
+| Security rules (mandatory) | `docs/03-design/security-contract.md` |
+| Implementation plan | `docs/03-design/implementation-plan.md` |
+| Command examples | `docs/02-commands/command-catalog.md` |
+| Architecture doc | `docs/03-design/architecture.md` |
 | B-bridge reference impl | `../openclaw-session-bridge/app/adapters.py` |
 | B-bridge models | `../openclaw-session-bridge/app/models.py` |
 | Core package entry | `packages/core/src/index.ts` |

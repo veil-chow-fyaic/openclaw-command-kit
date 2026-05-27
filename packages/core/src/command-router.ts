@@ -38,7 +38,8 @@ export class CommandRouter {
     if (trimmed === '/sessions') {
       const items = await this.history.listSessions(actor, route);
       const current = items.find((i) => i.isCurrent);
-      const text = formatSessionList(items, current);
+      let text = formatSessionList(items, current);
+      text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
       await adapter.deliverReply(route, text);
       return { handled: true };
     }

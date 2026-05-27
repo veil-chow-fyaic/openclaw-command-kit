@@ -23,24 +23,45 @@ export function formatSessionList(
   for (const item of displayItems) {
     const timeStr = formatDateTime(item.updatedAt);
     const preview = item.lastMessagePreview
-      ? ` · 最后：${truncate(item.lastMessagePreview, 30)}`
+      ? truncate(item.lastMessagePreview, 40)
       : '';
     lines.push(`${item.displayIndex}. ${item.title}`);
-    lines.push(`   ${timeStr}${preview}`);
+    if (preview) {
+      lines.push(`   ${preview} · ${timeStr}`);
+    } else {
+      lines.push(`   ${timeStr}`);
+    }
   }
 
   if (items.length > maxItems) {
     lines.push(`   … 还有 ${items.length - maxItems} 个历史对话`);
   }
 
-  lines.push('');
-  lines.push('发送 /resume N 切换到第 N 个历史对话。');
-
   return lines.join('\n');
 }
 
 export function formatResumeSuccess(item: ResumeListItem): string {
-  return `已切换到历史对话\n\n对话：${item.title}\n时间：${formatDateTime(item.updatedAt)}\n\n后续消息将进入这个上下文。`;
+  const parts: string[] = ['已切换到历史对话', ''];
+  parts.push(`对话：${item.title}`);
+  parts.push(`时间：${formatDateTime(item.updatedAt)}`);
+
+  if (item.lastUserMessage || item.lastAssistantMessage) {
+    parts.push('');
+    parts.push('最近聊到了：');
+    if (item.lastUserMessage) {
+      parts.push(`你：${truncate(item.lastUserMessage, 60)}`);
+    }
+    if (item.lastAssistantMessage) {
+      parts.push(`OpenClaw：${truncate(item.lastAssistantMessage, 60)}`);
+    }
+  } else if (item.lastMessagePreview) {
+    parts.push(`摘要：${truncate(item.lastMessagePreview, 60)}`);
+  }
+
+  parts.push('');
+  parts.push('后续消息将进入这个上下文。');
+
+  return parts.join('\n');
 }
 
 export function formatError(error: 'actor' | 'route' | 'invalid_index' | 'route_mismatch' | 'readback_failure' | 'store_error'): string {

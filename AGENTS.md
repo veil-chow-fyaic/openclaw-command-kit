@@ -27,11 +27,11 @@ This repository is for OpenClaw-specific, channel-agnostic slash-command enhance
 
 ## Execution Plan
 
-See `docs/implementation-plan.md` for the full phased plan.
+See `docs/03-design/implementation-plan.md` for the full phased plan.
 
-See `docs/loop-runbook.md` for the **/unattended loop execution guide** — this is the primary task list for the loop agent.
+See `docs/04-reference/loop-runbook.md` for the **/unattended loop execution guide** — this is the primary task list for the loop agent.
 
-See `docs/security-contract.md` for the **non-negotiable safety rules** — every implementation must satisfy every rule.
+See `docs/03-design/security-contract.md` for the **non-negotiable safety rules** — every implementation must satisfy every rule.
 
 Key decisions:
 - **No upstream PR** (OpenClaw source not cloned locally; compiled `dist/` only).

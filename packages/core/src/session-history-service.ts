@@ -49,6 +49,33 @@ export class SessionHistoryService {
       item.isCurrent = true;
     });
 
+    // Enrich active session preview from chat.history
+    if (activeItems.length > 0) {
+      try {
+        const chat = await this.gateway.chatHistory({ sessionKey: route.sessionKey, limit: 3 });
+        const msgs = (chat as any).messages ?? [];
+        const textMsgs: Array<{ role: string; text: string }> = [];
+        for (const m of msgs) {
+          if (!m || typeof m !== 'object') continue;
+          const role = String(m.role || '');
+          const text = extractMessageText(m).trim();
+          if ((role === 'user' || role === 'assistant') && text) {
+            textMsgs.push({ role, text: shortenText(text, 72) });
+          }
+        }
+        const lastUser = textMsgs.slice().reverse().find((m) => m.role === 'user')?.text || '';
+        const lastAssistant = textMsgs.slice().reverse().find((m) => m.role === 'assistant')?.text || '';
+        const preview = lastAssistant || lastUser || '';
+        for (const item of activeItems) {
+          item.lastMessagePreview = preview;
+          item.lastUserMessage = lastUser || undefined;
+          item.lastAssistantMessage = lastAssistant || undefined;
+        }
+      } catch {
+        // Fail-open: active sessions display without preview
+      }
+    }
+
     // Scan local transcript backups for historical generations
     const historicalItems: ResumeListItem[] = [];
     if (route.label && activeItems.length > 0) {
@@ -71,6 +98,8 @@ export class SessionHistoryService {
             title: gen.title,
             updatedAt: gen.updatedAt,
             lastMessagePreview: gen.lastMessagePreview,
+            lastUserMessage: gen.lastUserMessage,
+            lastAssistantMessage: gen.lastAssistantMessage,
             isCurrent: false,
             isRestorable: gen.isRestorable,
             sessionFile: gen.sessionFile,
@@ -147,4 +176,27 @@ function normalizeChatType(raw: string): RouteScope['chatType'] {
   if (lower === 'group' || lower === 'chatroom' || lower === 'room') return 'group';
   if (lower === 'thread' || lower === 'topic') return 'thread';
   return 'unknown';
+}
+
+function extractMessageText(message: unknown): string {
+  if (!message || typeof message !== 'object') return '';
+  const m = message as Record<string, unknown>;
+  const content = m.content;
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    const parts: string[] = [];
+    for (const item of content) {
+      if (item && typeof item === 'object' && (item as any).type === 'text' && typeof (item as any).text === 'string') {
+        parts.push((item as any).text);
+      }
+    }
+    return parts.join('\n');
+  }
+  return '';
+}
+
+function shortenText(text: string, limit: number): string {
+  const cleaned = text.replace(/\r?\n/g, ' ').trim();
+  if (cleaned.length <= limit) return cleaned;
+  return cleaned.slice(0, limit) + '…';
 }

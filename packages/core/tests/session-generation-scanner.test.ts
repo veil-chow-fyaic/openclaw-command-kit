@@ -57,6 +57,8 @@ describe('scanGenerations', () => {
     expect(result[0].sessionId).toBe('hist1');
     expect(result[0].title).toBe('Hello');
     expect(result[0].lastMessagePreview).toBe('Hi there');
+    expect(result[0].lastUserMessage).toBe('Hello');
+    expect(result[0].lastAssistantMessage).toBe('Hi there');
     expect(result[0].isCurrent).toBe(false);
   });
 

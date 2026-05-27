@@ -92,13 +92,14 @@ old projects are reference implementations and safety evidence, not runtime
 dependencies.
 
 1. This repository:
-   - [TLDR](tldr.md)
+   - [Quick Start](../01-getting-started/quickstart.md)
+   - [Installation Guide](../01-getting-started/installation.md)
    - [Prior art](prior-art.md)
-   - [Resume command spec](resume-command-spec.md)
-   - [Channel interaction and identity](channel-interaction.md)
-   - [Command catalog](command-catalog.md)
-   - [Architecture](architecture.md)
-   - [Roadmap](roadmap.md)
+   - [Resume command spec](../02-commands/resume-command-spec.md)
+   - [Channel interaction and identity](../03-design/channel-interaction.md)
+   - [Command catalog](../02-commands/command-catalog.md)
+   - [Architecture](../03-design/architecture.md)
+   - [Roadmap](../03-design/roadmap.md)
 2. Previous B-side design:
    - `/Users/fuyo-aic/Projects/openclaw-session-bridge/docs/native-session-command-design.md`
    - `/Users/fuyo-aic/Projects/openclaw-session-bridge/docs/wecom-scope-contract.md`
@@ -300,10 +301,10 @@ Example `/resume` response:
 当前：周威 · 刚刚 · 新对话
 
 1. 腾讯文档发布不了
-   5月23日 09:36 · 最后：看起来 gog 的 OAuth token 过期了...
+   看起来 gog 的 OAuth token 过期了... · 5月23日 09:36
 
 2. B端切换验收 testing-b
-   5月21日 19:31 · 最后：收到，测试正常
+   收到，测试正常 · 5月21日 19:31
 
 发送 /resume 2 切换到第 2 个历史对话。
 ```
@@ -315,6 +316,10 @@ Example success:
 
 对话：B端切换验收 testing-b
 时间：5月21日 19:31
+
+最近聊到了：
+你：testing-b 这个分支测试怎么样
+OpenClaw：收到，测试正常
 
 后续消息将进入这个上下文。
 ```

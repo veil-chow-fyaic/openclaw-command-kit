@@ -26,6 +26,8 @@ export interface ResumeListItem {
   title: string;
   updatedAt: Date;
   lastMessagePreview: string;
+  lastUserMessage?: string;
+  lastAssistantMessage?: string;
   isCurrent: boolean;
   isRestorable: boolean;
   sessionFile?: string;

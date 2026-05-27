@@ -301,10 +301,10 @@ No channel-specific code exists in either `core` or `plugin`.
 
 | Purpose | Path |
 |---|---|
-| Agent Task Brief (source of truth) | `/Users/fuyo-aic/Projects/openclaw-command-kit/docs/agent-task-brief.md` |
-| Resume Command Spec | `/Users/fuyo-aic/Projects/openclaw-command-kit/docs/resume-command-spec.md` |
-| Channel Interaction Spec | `/Users/fuyo-aic/Projects/openclaw-command-kit/docs/channel-interaction.md` |
-| Architecture Doc | `/Users/fuyo-aic/Projects/openclaw-command-kit/docs/architecture.md` |
+| Agent Task Brief (source of truth) | `/Users/fuyo-aic/Projects/openclaw-command-kit/docs/04-reference/agent-task-brief.md` |
+| Resume Command Spec | `/Users/fuyo-aic/Projects/openclaw-command-kit/docs/02-commands/resume-command-spec.md` |
+| Channel Interaction Spec | `/Users/fuyo-aic/Projects/openclaw-command-kit/docs/03-design/channel-interaction.md` |
+| Architecture Doc | `/Users/fuyo-aic/Projects/openclaw-command-kit/docs/03-design/architecture.md` |
 | B-bridge reference impl | `/Users/fuyo-aic/Projects/openclaw-session-bridge/app/adapters.py` |
 | B-bridge models | `/Users/fuyo-aic/Projects/openclaw-session-bridge/app/models.py` |
 | OpenClaw session store dir | `~/.openclaw/agents/main/sessions/` |
@@ -417,7 +417,7 @@ openclaw-command-kit/
 ```
 
 When the loop agent starts, give it:
-1. This plan (`docs/implementation-plan.md`)
-2. The agent task brief (`docs/agent-task-brief.md`)
+1. This plan (`docs/03-design/implementation-plan.md`)
+2. The agent task brief (`docs/04-reference/agent-task-brief.md`)
 3. Permission to read B-bridge code for reference (`../openclaw-session-bridge/app/adapters.py`)
 4. Clear boundary: do NOT modify compiled OpenClaw in `/opt/homebrew/...`; do NOT modify user-local extensions in `~/.openclaw/extensions/`. This repo is a library + plugin, not a patch.

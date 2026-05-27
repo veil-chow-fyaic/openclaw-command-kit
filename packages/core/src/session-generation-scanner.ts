@@ -15,6 +15,8 @@ export interface GenerationInfo {
   title: string;
   updatedAt: Date;
   lastMessagePreview: string;
+  lastUserMessage?: string;
+  lastAssistantMessage?: string;
   isCurrent: boolean;
   isRestorable: boolean;
 }
@@ -176,6 +178,8 @@ async function summarizeGenerationFile(
     title,
     updatedAt,
     lastMessagePreview: lastPreview,
+    lastUserMessage: lastUser || undefined,
+    lastAssistantMessage: lastAssistant || undefined,
     isCurrent: false,
     isRestorable: true,
   };

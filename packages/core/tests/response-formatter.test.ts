@@ -21,7 +21,7 @@ describe('formatSessionList', () => {
     expect(text).toBe('当前聊天还没有可恢复的历史对话。');
   });
 
-  it('formats list with items', () => {
+  it('formats list with preview and time on second line', () => {
     const items = [
       makeItem({ displayIndex: 1, title: '腾讯文档发布不了', updatedAt: new Date('2026-05-23T09:36:00'), lastMessagePreview: 'gog 的 OAuth token 过期了' }),
       makeItem({ displayIndex: 2, title: 'B端切换验收', updatedAt: new Date('2026-05-21T19:31:00') }),
@@ -29,8 +29,18 @@ describe('formatSessionList', () => {
     const text = formatSessionList(items);
     expect(text).toContain('可恢复的历史对话');
     expect(text).toContain('1. 腾讯文档发布不了');
+    expect(text).toContain('gog 的 OAuth token 过期了');
     expect(text).toContain('2. B端切换验收');
-    expect(text).toContain('发送 /resume N 切换到第 N 个历史对话');
+    // Should NOT contain hint (hint is added by caller now)
+    expect(text).not.toContain('发送 /resume');
+  });
+
+  it('truncates long preview', () => {
+    const longPreview = 'a'.repeat(100);
+    const items = [makeItem({ displayIndex: 1, title: '长摘要测试', lastMessagePreview: longPreview })];
+    const text = formatSessionList(items);
+    expect(text).toContain('…');
+    expect(text).not.toContain('a'.repeat(50));
   });
 
   it('does not expose raw sessionId', () => {
@@ -41,11 +51,27 @@ describe('formatSessionList', () => {
 });
 
 describe('formatResumeSuccess', () => {
-  it('includes title and date', () => {
-    const text = formatResumeSuccess(makeItem({ title: 'B端切换验收' }));
+  it('includes title, date and last messages', () => {
+    const text = formatResumeSuccess(makeItem({
+      title: 'B端切换验收',
+      lastUserMessage: 'testing-b 这个分支测试怎么样',
+      lastAssistantMessage: '收到，测试正常',
+    }));
     expect(text).toContain('已切换到历史对话');
     expect(text).toContain('B端切换验收');
+    expect(text).toContain('最近聊到了');
+    expect(text).toContain('你：testing-b 这个分支测试怎么样');
+    expect(text).toContain('OpenClaw：收到，测试正常');
     expect(text).toContain('后续消息将进入这个上下文');
+  });
+
+  it('falls back to summary preview when no last messages', () => {
+    const text = formatResumeSuccess(makeItem({
+      title: 'B端切换验收',
+      lastMessagePreview: '收到，测试正常',
+    }));
+    expect(text).toContain('摘要：收到，测试正常');
+    expect(text).not.toContain('最近聊到了');
   });
 });
 
