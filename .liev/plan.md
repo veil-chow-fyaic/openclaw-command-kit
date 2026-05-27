@@ -21,7 +21,7 @@ tonight.
 - [x] Defer optional `/scope` or `/whoami`; command-selection rationale documents the safety constraints.
 - [x] Run final validation: `npm run lint && npm run test:run && npm run build`.
 - [x] Append final progress event with `final state: Done` or blocker.
-- [ ] Commit, push, open PR, update Linear, and move issue to In Review or non-active Backlog/Blocked.
+- [x] Commit, push, open PR, update Linear, and move issue to In Review or non-active Backlog/Blocked.
 
 ## Issue Graph
 
@@ -41,7 +41,7 @@ Related planning issues: AIC-2623, AIC-2624, AIC-2629
 - [x] `npm run lint` passes.
 - [x] `npm run test:run` passes.
 - [x] `npm run build` passes.
-- [ ] PR exists or exact blocker is recorded.
+- [x] PR exists or exact blocker is recorded.
 
 ## Final Acceptance
 
