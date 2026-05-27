@@ -5,11 +5,12 @@ import {
   SessionHistoryService,
   RestoreService,
   CommandRouter,
+  formatCommandsList,
   formatSessionList,
   formatResumeSuccess,
   formatError,
 } from '@openclaw-commands/core';
-import type { PluginCommandContext, PluginCommandResult } from 'openclaw/plugin-sdk/plugins/types';
+import type { PluginCommandContext, PluginCommandResult } from 'openclaw/plugin-sdk/plugin-entry';
 import { deriveScopes } from './scope-deriver.js';
 
 export class SessionCommandHandlers {
@@ -27,6 +28,10 @@ export class SessionCommandHandlers {
     this.history = history ?? new SessionHistoryService(this.gateway);
     this.restore = restore ?? new RestoreService(this.gateway, this.history);
     this.router = new CommandRouter(this.history, this.restore);
+  }
+
+  async handleCommands(): Promise<PluginCommandResult> {
+    return { text: formatCommandsList() };
   }
 
   async handleSessions(ctx: PluginCommandContext): Promise<PluginCommandResult> {

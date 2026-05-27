@@ -4,15 +4,12 @@ vi.mock('openclaw/plugin-sdk', () => ({
   emptyPluginConfigSchema: vi.fn(() => ({})),
 }));
 
-vi.mock('openclaw/plugin-sdk/plugins/types', () => ({
-  // Types-only; no runtime values needed for this test
-}));
-
 import plugin from '../src/index.js';
 import { SessionCommandHandlers } from '../src/command-handlers.js';
 
 vi.mock('../src/command-handlers.js', () => ({
   SessionCommandHandlers: vi.fn(() => ({
+    handleCommands: vi.fn().mockResolvedValue({ text: 'commands list' }),
     handleSessions: vi.fn().mockResolvedValue({ text: 'sessions list' }),
     handleResume: vi.fn().mockResolvedValue({ text: 'resume list' }),
     handleResumeByIndex: vi.fn().mockResolvedValue({ text: 'resumed' }),
@@ -29,15 +26,23 @@ describe('plugin definition', () => {
   it('exports a valid OpenClawPluginDefinition', () => {
     expect(plugin.id).toBe('openclaw-command-kit');
     expect(plugin.name).toBe('OpenClaw Command Kit');
+    expect(plugin.description).toContain('/commands');
     expect(plugin.description).toContain('/sessions');
     expect(plugin.register).toBeTypeOf('function');
   });
 
-  it('registers sessions and resume commands', () => {
+  it('registers commands, sessions and resume commands', () => {
     const api = createMockApi();
     plugin.register(api as any);
 
-    expect(api.registerCommand).toHaveBeenCalledTimes(2);
+    expect(api.registerCommand).toHaveBeenCalledTimes(3);
+    expect(api.registerCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'commands',
+        acceptsArgs: false,
+        requireAuth: true,
+      })
+    );
     expect(api.registerCommand).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'sessions',
@@ -52,6 +57,22 @@ describe('plugin definition', () => {
         requireAuth: true,
       })
     );
+  });
+
+  it('commands handler delegates to SessionCommandHandlers.handleCommands', async () => {
+    const api = createMockApi();
+    plugin.register(api as any);
+
+    const commandsCall = api.registerCommand.mock.calls.find(
+      (c: any) => c[0].name === 'commands'
+    );
+    expect(commandsCall).toBeDefined();
+
+    const handler = commandsCall![0].handler;
+    const result = await handler({} as any);
+
+    expect(SessionCommandHandlers).toHaveBeenCalled();
+    expect(result.text).toBe('commands list');
   });
 
   it('sessions handler delegates to SessionCommandHandlers.handleSessions', async () => {

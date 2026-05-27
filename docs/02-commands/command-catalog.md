@@ -6,6 +6,58 @@ These commands are implemented and ready to use.
 
 ---
 
+### `/commands`
+
+**Purpose:** Show the OpenClaw Command Kit commands available in the current
+plugin.
+
+**Scope:** Read-only. Does not inspect or mutate session state.
+
+**Usage:**
+
+```text
+/commands
+```
+
+**Example Response:**
+
+```text
+可用命令
+
+/commands
+  查看当前可用命令。
+  用法：/commands
+
+/sessions
+  列出当前聊天可恢复的历史对话。
+  用法：/sessions
+
+/resume
+  查看可恢复对话列表，并提示如何切换。
+  用法：/resume
+
+/resume N
+  切换到第 N 个历史对话。
+  用法：/resume 2
+
+会话命令只作用于当前聊天范围，不显示原始 session id。
+```
+
+**What it does:**
+
+1. Returns the static OpenClaw Command Kit command catalog.
+2. Avoids session lookup and route reverse-lookup because no private session
+   data is needed.
+3. Keeps discovery usable in channels that do not provide a slash-command popup.
+
+**Constraints:**
+
+- Only exact `/commands` is handled.
+- Does not manage custom commands or plugin loading.
+- Does not show account ids, organizations, route keys, or raw session ids.
+
+---
+
 ### `/sessions`
 
 **Purpose:** List current and historical conversations for the current chat route.

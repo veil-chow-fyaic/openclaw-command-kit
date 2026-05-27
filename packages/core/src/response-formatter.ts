@@ -1,6 +1,44 @@
 // Format chat-friendly Chinese reply text.
 
-import type { ResumeListItem } from './types.js';
+import type { CommandCatalogItem, ResumeListItem } from './types.js';
+
+export const COMMAND_CATALOG: CommandCatalogItem[] = [
+  {
+    command: '/commands',
+    description: '查看当前可用命令。',
+    usage: '/commands',
+  },
+  {
+    command: '/sessions',
+    description: '列出当前聊天可恢复的历史对话。',
+    usage: '/sessions',
+  },
+  {
+    command: '/resume',
+    description: '查看可恢复对话列表，并提示如何切换。',
+    usage: '/resume',
+  },
+  {
+    command: '/resume N',
+    description: '切换到第 N 个历史对话。',
+    usage: '/resume 2',
+  },
+];
+
+export function formatCommandsList(items: CommandCatalogItem[] = COMMAND_CATALOG): string {
+  const lines: string[] = ['可用命令', ''];
+
+  for (const item of items) {
+    lines.push(`${item.command}`);
+    lines.push(`  ${item.description}`);
+    lines.push(`  用法：${item.usage}`);
+    lines.push('');
+  }
+
+  lines.push('会话命令只作用于当前聊天范围，不显示原始 session id。');
+
+  return lines.join('\n');
+}
 
 export function formatSessionList(
   items: ResumeListItem[],

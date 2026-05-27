@@ -8,7 +8,7 @@ import {
   formatResumeSuccess,
   formatError,
 } from '@openclaw-commands/core';
-import type { PluginCommandContext } from 'openclaw/plugin-sdk/plugins/types';
+import type { PluginCommandContext } from 'openclaw/plugin-sdk/plugin-entry';
 
 vi.mock('../src/scope-deriver.js', () => ({
   deriveScopes: vi.fn(),
@@ -68,6 +68,17 @@ describe('SessionCommandHandlers', () => {
       mockHistory as unknown as SessionHistoryService,
       mockRestore as unknown as RestoreService
     );
+  });
+
+  describe('handleCommands', () => {
+    it('returns command catalog without deriving route scope', async () => {
+      const result = await handlers.handleCommands();
+
+      expect(result.text).toContain('/commands');
+      expect(result.text).toContain('/sessions');
+      expect(result.text).toContain('/resume N');
+      expect(deriveScopes).not.toHaveBeenCalled();
+    });
   });
 
   describe('handleSessions', () => {

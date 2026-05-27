@@ -1,7 +1,7 @@
 {
   "name": "@openclaw-commands/openclaw-command-kit",
   "version": "0.1.0",
-  "description": "OpenClaw extension plugin providing /sessions and /resume commands.",
+  "description": "OpenClaw extension plugin providing /commands, /sessions and /resume commands.",
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",

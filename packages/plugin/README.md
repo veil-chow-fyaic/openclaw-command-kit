@@ -6,6 +6,7 @@ OpenClaw extension plugin providing native session commands.
 
 | Command | Description |
 |---------|-------------|
+| `/commands` | Show available OpenClaw Command Kit commands. |
 | `/sessions` | List current and historical sessions for the current chat route. |
 | `/resume` | Show the session list (same as `/sessions`). |
 | `/resume N` | Switch to the N-th session in the list. |

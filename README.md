@@ -20,6 +20,7 @@ OpenClaw chat commands for session history and resume.
 
 | Command | Description | Example |
 |---------|-------------|---------|
+| `/commands` | Show available OpenClaw Command Kit commands. | `/commands` |
 | `/sessions` | List current and historical sessions for the current chat route. | `/sessions` |
 | `/resume` | Show the session list with usage hints. | `/resume` |
 | `/resume N` | Switch to the N-th session in the list. | `/resume 2` |
@@ -121,6 +122,7 @@ OpenClaw Core Dispatch
   |
   v
 [Core: Command Router] (channel-agnostic)
+  |-- /commands  --> ResponseFormatter
   |-- /sessions  --> SessionHistoryService --> ResponseFormatter
   |-- /resume    --> SessionHistoryService --> ResponseFormatter
   |-- /resume N  --> RestoreService        --> ResponseFormatter
@@ -146,6 +148,7 @@ For the full architecture document, see [Architecture](docs/03-design/architectu
 ### Design
 - [Architecture](docs/03-design/architecture.md) — Component diagram, data model, and implementation phases
 - [Channel Interaction](docs/03-design/channel-interaction.md) — Actor scope, route scope, and selection flow
+- [Command Selection Rationale](docs/03-design/command-selection-rationale.md) — Copy, adapt, reject, and later decisions for the first command set
 - [Implementation Plan](docs/03-design/implementation-plan.md) — Task breakdown and risk register
 - [Roadmap](docs/03-design/roadmap.md) — Phase 0 through Phase 4 roadmap
 - [Security Contract](docs/03-design/security-contract.md) — Non-negotiable safety rules
@@ -155,6 +158,7 @@ For the full architecture document, see [Architecture](docs/03-design/architectu
 - [Loop Runbook](docs/04-reference/loop-runbook.md) — Execution guide for loop agents
 - [Prior Art](docs/04-reference/prior-art.md) — Community research and related projects
 - [Research Notes](docs/04-reference/research-notes.md) — Local OpenClaw observations and external references
+- [Slash-Command Prior Art](docs/04-reference/slash-command-prior-art.md) — Claude Code, Codex CLI, Kimi Code, and Gemini CLI command matrix
 
 ## Build & Test
 

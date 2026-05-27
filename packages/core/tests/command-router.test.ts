@@ -23,7 +23,7 @@ const adapter: SessionCommandAdapter = {
   resolveActorScope: () => actor,
   resolveRouteScope: () => route,
   deliverReply: vi.fn(),
-  shouldIntercept: (text) => text.startsWith('/sessions') || text.startsWith('/resume'),
+  shouldIntercept: (text) => text.startsWith('/commands') || text.startsWith('/sessions') || text.startsWith('/resume'),
 };
 
 function makeItem(overrides: Partial<ResumeListItem> = {}): ResumeListItem {
@@ -42,6 +42,22 @@ function makeItem(overrides: Partial<ResumeListItem> = {}): ResumeListItem {
 describe('CommandRouter', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('handles /commands without session lookup', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    history.listSessions.mockResolvedValue([makeItem()]);
+
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/commands', actor, route, adapter);
+
+    expect(result.handled).toBe(true);
+    expect(history.listSessions).not.toHaveBeenCalled();
+    const replyText = (adapter.deliverReply as any).mock.calls[0][1];
+    expect(replyText).toContain('/commands');
+    expect(replyText).toContain('/sessions');
   });
 
   it('handles /sessions', async () => {
@@ -100,6 +116,15 @@ describe('CommandRouter', () => {
     const router = new CommandRouter(history, restore);
 
     const result = await router.handle('/session', actor, route, adapter);
+    expect(result.handled).toBe(false);
+  });
+
+  it('rejects extra arguments on /commands', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/commands extra', actor, route, adapter);
     expect(result.handled).toBe(false);
   });
 

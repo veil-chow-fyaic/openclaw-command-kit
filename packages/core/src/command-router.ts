@@ -10,6 +10,7 @@ import type {
 import { SessionHistoryService } from './session-history-service.js';
 import { RestoreService } from './restore-service.js';
 import {
+  formatCommandsList,
   formatSessionList,
   formatResumeSuccess,
   formatError,
@@ -34,6 +35,11 @@ export class CommandRouter {
     adapter: SessionCommandAdapter
   ): Promise<CommandResult> {
     const trimmed = rawText.trim();
+
+    if (trimmed === '/commands') {
+      await adapter.deliverReply(route, formatCommandsList());
+      return { handled: true };
+    }
 
     if (trimmed === '/sessions') {
       const items = await this.history.listSessions(actor, route);

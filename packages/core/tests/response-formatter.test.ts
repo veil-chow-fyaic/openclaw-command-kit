@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { formatSessionList, formatResumeSuccess, formatError } from '../src/response-formatter.js';
+import {
+  formatCommandsList,
+  formatSessionList,
+  formatResumeSuccess,
+  formatError,
+} from '../src/response-formatter.js';
 import type { ResumeListItem } from '../src/types.js';
 
 function makeItem(overrides: Partial<ResumeListItem> = {}): ResumeListItem {
@@ -14,6 +19,25 @@ function makeItem(overrides: Partial<ResumeListItem> = {}): ResumeListItem {
     ...overrides,
   };
 }
+
+describe('formatCommandsList', () => {
+  it('lists available commands and usage examples', () => {
+    const text = formatCommandsList();
+    expect(text).toContain('可用命令');
+    expect(text).toContain('/commands');
+    expect(text).toContain('/sessions');
+    expect(text).toContain('/resume');
+    expect(text).toContain('/resume N');
+    expect(text).toContain('用法：/resume 2');
+  });
+
+  it('does not expose route or session identifiers', () => {
+    const text = formatCommandsList();
+    expect(text).not.toContain('session-');
+    expect(text).not.toContain('sessionKey');
+    expect(text).not.toContain('accountId');
+  });
+});
 
 describe('formatSessionList', () => {
   it('returns empty message for empty list', () => {

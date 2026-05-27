@@ -1,4 +1,4 @@
-// OpenClaw extension plugin: /sessions, /resume, /resume N
+// OpenClaw extension plugin: /commands, /sessions, /resume, /resume N
 //
 // Installation: place this package in ~/.openclaw/extensions/openclaw-command-kit/
 // (or npm link / npm install -g then reference in openclaw.json).
@@ -7,10 +7,17 @@ import { SessionCommandHandlers } from './command-handlers.js';
 const plugin = {
     id: 'openclaw-command-kit',
     name: 'OpenClaw Command Kit',
-    description: 'Native session commands: /sessions, /resume, /resume N',
+    description: 'Native session commands: /commands, /sessions, /resume, /resume N',
     configSchema: emptyPluginConfigSchema(),
     register(api) {
         const handlers = new SessionCommandHandlers();
+        api.registerCommand({
+            name: 'commands',
+            description: '查看 OpenClaw Command Kit 可用命令',
+            acceptsArgs: false,
+            requireAuth: true,
+            handler: () => handlers.handleCommands(),
+        });
         api.registerCommand({
             name: 'sessions',
             description: '列出当前聊天可恢复的历史对话',

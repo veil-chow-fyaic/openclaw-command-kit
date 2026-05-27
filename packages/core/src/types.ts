@@ -33,6 +33,12 @@ export interface ResumeListItem {
   sessionFile?: string;
 }
 
+export interface CommandCatalogItem {
+  command: string;
+  description: string;
+  usage: string;
+}
+
 export interface SessionSummary {
   sessionId: string;
   title?: string;
