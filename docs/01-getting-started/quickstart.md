@@ -1,15 +1,21 @@
 # Quick Start
 
-Get OpenClaw Command Kit running in under 5 minutes.
+Get OpenClaw Command Kit running from source in under 5 minutes.
+
+The current supported install path is a source checkout linked into OpenClaw's
+extension directory. npm package names are reserved for a future manual release,
+but this project should not be treated as published to npm yet.
 
 ## What You Get
 
-Three native chat commands for OpenClaw:
+Native chat commands for OpenClaw:
 
 | Command | What it does |
 |---------|--------------|
 | `/sessions` | Lists current + historical conversations for this chat route. |
+| `/sessions <query>` | Filters that scoped list by title, preview, message text, or time label. |
 | `/resume` | Same list as `/sessions`, with a stronger hint to use `/resume N`. |
+| `/resume <query>` | Shows filtered resume candidates without switching sessions. |
 | `/resume N` | Switches to the N-th conversation in the list. |
 
 ## Prerequisites
@@ -18,17 +24,18 @@ Three native chat commands for OpenClaw:
 - OpenClaw >= 0.1.0 (with `plugin-sdk` support)
 - `openclaw` CLI available in your shell (`which openclaw`)
 
-## One-Line Install
+## Source Install
 
 ```bash
 # Clone and build
-git clone <repo-url> openclaw-command-kit
+git clone https://github.com/veil-chow-fyaic/openclaw-command-kit.git
 cd openclaw-command-kit
 npm install
 npm run build
 
 # Symlink plugin into OpenClaw extensions
-ln -s $(pwd)/packages/plugin ~/.openclaw/extensions/openclaw-command-kit
+mkdir -p "$HOME/.openclaw/extensions"
+ln -sfn "$(pwd)/packages/plugin" "$HOME/.openclaw/extensions/openclaw-command-kit"
 ```
 
 ## Configure OpenClaw
@@ -106,6 +113,16 @@ OpenClaw：收到，测试正常
 后续消息将进入这个上下文。
 ```
 
+You can also verify scoped filtering without switching:
+
+```text
+/sessions testing-b
+/resume testing-b
+```
+
+Filtered results are read-only and keep the displayed indexes. Use the exact
+`/resume N` shown in the response to switch.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -114,9 +131,12 @@ OpenClaw：收到，测试正常
 | `/sessions` says "没有可恢复的历史对话" | This is normal for a brand-new route with no history. |
 | Command not recognized | Gateway not restarted after install. Run the `launchctl` restart command above. |
 | Old code still running after rebuild | Gateway caches compiled JS in memory. Always restart after `npm run build`. |
+| Linked package loads but JS is missing | Run `npm run build` again; OpenClaw loads `packages/plugin/dist/src/index.js`. |
+| Query returns no matches | Queries only filter sessions already authorized for the current actor and route. Try `/sessions` first. |
 
 ## Next Steps
 
 - Read the full [Installation Guide](installation.md)
 - Browse the [Command Catalog](../02-commands/command-catalog.md)
 - Understand the [Architecture](../03-design/architecture.md)
+- Review [Release and Distribution](../03-design/release-distribution.md)

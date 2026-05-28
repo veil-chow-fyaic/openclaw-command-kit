@@ -67,7 +67,8 @@ The repository ships two layers:
 - Once loaded, `registerCommand` makes the command available in **every channel** OpenClaw supports (WeCom, Telegram, Slack, Discord, WebChat, etc.)
 - No per-channel adapter code is required
 - No modification to OpenClaw source code or compiled `dist/` is required
-- Plugin is independently packageable and distributable via npm
+- Plugin/package metadata is prepared for a future npm release, but the current
+  supported install path is source checkout + build + link into OpenClaw
 
 ### Component Diagram
 
@@ -280,13 +281,15 @@ No channel-specific code exists in either `core` or `plugin`.
 
 ---
 
-### Phase 5: Query Search (Optional / Deferred)
+### Phase 5: Query Search
 **Goal**: Implement `/sessions <query>` and `/resume <query>`.
+
+Status: implemented.
 
 **Tasks**:
 1. Extend command parser to accept optional query argument
 2. Filter scoped sessions by title, preview, last message, time
-3. `/resume <query>`: if exactly one strong match, switch; if multiple, show list; if none, error
+3. `/resume <query>`: always show filtered candidates and never switch directly
 
 **Acceptance**:
 - Search runs ONLY after route scope filtering
@@ -380,21 +383,30 @@ No channel-specific code exists in either `core` or `plugin`.
 
 ## 9. Installation & Distribution
 
-### Local Install (Development)
+### Source Install
 
 ```bash
-cd packages/plugin
+git clone https://github.com/veil-chow-fyaic/openclaw-command-kit.git
+cd openclaw-command-kit
+npm install
 npm run build
-ln -s $(pwd)/dist ~/.openclaw/extensions/openclaw-command-kit
-# Or copy: cp -r dist ~/.openclaw/extensions/openclaw-command-kit
+mkdir -p "$HOME/.openclaw/extensions"
+ln -sfn "$(pwd)/packages/plugin" "$HOME/.openclaw/extensions/openclaw-command-kit"
 ```
 
-### npm Install (Production)
+Do not copy `dist` alone. OpenClaw should load the package directory so
+`package.json`, `openclaw.plugin.json`, and compiled JS stay together.
+
+### Future npm Install
 
 ```bash
-npm install -g @openclaw-commands/plugin
+npm install -g @openclaw-commands/openclaw-command-kit
 # OpenClaw auto-detects via `openclaw.extensions` in package.json
 ```
+
+Use this only after manual npm publishing and release tagging are complete. See
+`docs/03-design/release-distribution.md` for the release policy, metadata
+strategy, and package-level `dist` artifact rules.
 
 ### Package Structure
 
@@ -410,7 +422,7 @@ openclaw-command-kit/
       src/
       tests/
     plugin/             # OpenClaw Extension Plugin
-      package.json      # @openclaw-commands/plugin
+      package.json      # @openclaw-commands/openclaw-command-kit
       tsconfig.json
       src/
       tests/

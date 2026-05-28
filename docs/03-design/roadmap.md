@@ -2,7 +2,7 @@
 
 ## Phase 0: Design Workspace
 
-Status: current.
+Status: completed.
 
 - Capture command naming and UX.
 - Document OpenClaw primitives to reuse.
@@ -37,6 +37,8 @@ Implementation:
 
 ## Phase 2: Query Filtering
 
+Status: implemented.
+
 Deliver:
 
 - `/sessions <query>`
@@ -51,6 +53,8 @@ Requirements:
 
 ## Phase 3: Conversation Organization
 
+Status: future.
+
 Candidates:
 
 - `/rename <title>`
@@ -61,7 +65,21 @@ Candidates:
 
 These should wait until the resume flow is stable.
 
+## Release Readiness
+
+Status: source distribution ready after validation.
+
+Current scope:
+
+- source install is the supported public distribution path;
+- npm package names and metadata are prepared for a future manual release;
+- package-level `dist` artifacts are committed and rebuilt before handoff;
+- no npm publish, `main` merge, or repository setting change is part of this
+  roadmap phase.
+
 ## Phase 4: Cross-Channel Polish
+
+Status: future.
 
 Adapt formatting and route resolution for:
 
