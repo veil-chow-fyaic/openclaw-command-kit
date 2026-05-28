@@ -9,7 +9,7 @@ import {
   formatResumeSuccess,
   formatError,
 } from '@openclaw-commands/core';
-import type { PluginCommandContext, PluginCommandResult } from 'openclaw/plugin-sdk/plugins/types';
+import type { PluginCommandContext, PluginCommandResult } from 'openclaw/plugin-sdk/plugin-entry';
 import { deriveScopes } from './scope-deriver.js';
 
 export class SessionCommandHandlers {

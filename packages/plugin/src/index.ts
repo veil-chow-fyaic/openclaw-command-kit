@@ -3,8 +3,8 @@
 // Installation: place this package in ~/.openclaw/extensions/openclaw-command-kit/
 // (or npm link / npm install -g then reference in openclaw.json).
 
-import type { OpenClawPluginApi, OpenClawPluginDefinition } from 'openclaw/plugin-sdk/plugins/types';
 import { emptyPluginConfigSchema } from 'openclaw/plugin-sdk';
+import type { OpenClawPluginApi, OpenClawPluginDefinition } from 'openclaw/plugin-sdk/plugin-entry';
 import { SessionCommandHandlers } from './command-handlers.js';
 
 const plugin: OpenClawPluginDefinition = {

@@ -4,10 +4,6 @@ vi.mock('openclaw/plugin-sdk', () => ({
   emptyPluginConfigSchema: vi.fn(() => ({})),
 }));
 
-vi.mock('openclaw/plugin-sdk/plugins/types', () => ({
-  // Types-only; no runtime values needed for this test
-}));
-
 import plugin from '../src/index.js';
 import { SessionCommandHandlers } from '../src/command-handlers.js';
 

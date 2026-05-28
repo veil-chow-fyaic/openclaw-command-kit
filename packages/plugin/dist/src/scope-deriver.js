@@ -50,11 +50,17 @@ export async function deriveScopes(ctx, gateway, agentId = 'main') {
         accountId,
         organization,
         label: to,
-        threadId: typeof ctx.messageThreadId === 'number' ? String(ctx.messageThreadId) : undefined,
+        threadId: normalizeThreadId(ctx.messageThreadId),
     });
     if (!route)
         return null;
     return { actor, route };
+}
+function normalizeThreadId(threadId) {
+    if (typeof threadId === 'number')
+        return String(threadId);
+    const trimmed = threadId?.trim();
+    return trimmed || undefined;
 }
 function deliveryContextMatches(session, channel, accountId, to) {
     const dc = session.deliveryContext ?? {};

@@ -29,7 +29,7 @@ export async function deriveScopes(
     from?: string;
     to?: string;
     senderId?: string;
-    messageThreadId?: number;
+    messageThreadId?: string | number;
   },
   gateway: GatewayClient,
   agentId: string = 'main'
@@ -80,12 +80,18 @@ export async function deriveScopes(
     accountId,
     organization,
     label: to,
-    threadId: typeof ctx.messageThreadId === 'number' ? String(ctx.messageThreadId) : undefined,
+    threadId: normalizeThreadId(ctx.messageThreadId),
   });
 
   if (!route) return null;
 
   return { actor, route };
+}
+
+function normalizeThreadId(threadId: string | number | undefined): string | undefined {
+  if (typeof threadId === 'number') return String(threadId);
+  const trimmed = threadId?.trim();
+  return trimmed || undefined;
 }
 
 function deliveryContextMatches(

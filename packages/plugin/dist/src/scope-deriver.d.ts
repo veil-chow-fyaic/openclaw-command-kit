@@ -18,6 +18,6 @@ export declare function deriveScopes(ctx: {
     from?: string;
     to?: string;
     senderId?: string;
-    messageThreadId?: number;
+    messageThreadId?: string | number;
 }, gateway: GatewayClient, agentId?: string): Promise<DeriveResult | null>;
 //# sourceMappingURL=scope-deriver.d.ts.map
