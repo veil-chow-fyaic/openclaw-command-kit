@@ -21,7 +21,7 @@ Required evidence:
 - [x] No npm publish, main merge, repository settings change, secret access, or
   default branch change was performed.
 - [x] Required validation command passed.
-- [ ] PR was opened with validation evidence.
+- [x] PR was opened with validation evidence.
 
 ## Completion Rule
 

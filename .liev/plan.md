@@ -61,7 +61,7 @@ Rationale:
     imply npm was published.
   - Done when: package/plugin metadata and docs tell one consistent story.
 
-- [ ] Phase 5: Validation and handoff
+- [x] Phase 5: Validation and handoff
   - Goal: prove the docs/release changes did not break the project.
   - Depends on: Phases 2-4.
   - Validation: run `npm run lint && npm run test:run && npm run build`.
@@ -104,7 +104,7 @@ Follow-ups:
 ## Final Acceptance
 
 - [x] `npm run lint && npm run test:run && npm run build` passed.
-- [ ] PR opened against `liev/openclaw-command-kit-v2`.
-- [ ] PR body includes summary, tests, risks, release/publishing notes, and
+- [x] PR opened against `liev/openclaw-command-kit-v2`.
+- [x] PR body includes summary, tests, risks, release/publishing notes, and
   rollback note.
-- [ ] AIC-2625 moved to In Review or a blocker was recorded.
+- [x] AIC-2625 moved to In Review or a blocker was recorded.
