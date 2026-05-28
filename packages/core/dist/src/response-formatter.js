@@ -1,6 +1,10 @@
 // Format chat-friendly Chinese reply text.
-export function formatSessionList(items, currentItem, maxItems = 10) {
+export function formatSessionList(items, currentItem, maxItems = 10, query) {
     if (items.length === 0) {
+        const trimmedQuery = query?.trim();
+        if (trimmedQuery) {
+            return `当前聊天没有匹配“${truncate(trimmedQuery, 40)}”的历史对话。`;
+        }
         return '当前聊天还没有可恢复的历史对话。';
     }
     let lines = ['可恢复的历史对话'];
@@ -66,6 +70,9 @@ export function formatError(error) {
         default:
             return '操作失败，请稍后重试。';
     }
+}
+export function formatResumeUsage() {
+    return '用法：/resume N（N 为对话编号）';
 }
 function formatDateTime(d) {
     return d.toLocaleString('zh-CN', {

@@ -25,5 +25,7 @@ export {
   formatSessionList,
   formatResumeSuccess,
   formatError,
+  formatResumeUsage,
 } from './response-formatter.js';
+export { filterSessionsByQuery, normalizeSessionQuery } from './session-query.js';
 export { CommandRouter } from './command-router.js';

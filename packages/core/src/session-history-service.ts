@@ -3,6 +3,7 @@
 import type { GatewayClient } from './gateway-client.js';
 import type { ActorScope, RouteScope, ResumeListItem } from './types.js';
 import { scanGenerations } from './session-generation-scanner.js';
+import { filterSessionsByQuery } from './session-query.js';
 
 interface RawSession {
   key?: string;
@@ -26,7 +27,8 @@ export class SessionHistoryService {
 
   async listSessions(
     actor: ActorScope,
-    route: RouteScope
+    route: RouteScope,
+    query?: string
   ): Promise<ResumeListItem[]> {
     // Fail-closed: actor must be valid and consistent with route
     if (!actor.senderId) return [];
@@ -138,7 +140,7 @@ export class SessionHistoryService {
       item.displayIndex = idx + 1;
     });
 
-    return merged;
+    return filterSessionsByQuery(merged, query);
   }
 
   private _toItem(raw: RawSession, route: RouteScope): ResumeListItem | null {

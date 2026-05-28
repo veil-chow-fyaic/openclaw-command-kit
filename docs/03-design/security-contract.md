@@ -25,7 +25,7 @@ Never use `SenderName` for authorization, identity matching, or scope resolution
 If `RouteScope` cannot be resolved (missing `sessionKey` or `chatType`), fail closed immediately.
 
 **Rule 2.2: Scoped listing only.**
-`/sessions` MUST return only sessions that belong to the exact current route scope (`provider + accountId + organization + chatType + sessionKey`). Never fall back to global/recent session search.
+`/sessions` and `/sessions <query>` MUST return only sessions that belong to the exact current route scope (`provider + accountId + organization + chatType + sessionKey`). Never fall back to global/recent session search.
 
 **Rule 2.3: Cross-route leakage is blocked.**
 A direct chat between User A and the bot must never list or restore sessions from a group chat that User A happens to be in. Different `sessionKey` = different route = different session universe.
@@ -58,7 +58,9 @@ If a numeric index somehow points to a session outside the current route scope (
 **Rule 4.1: Exact prefix matching.**
 Only these forms are valid commands:
 - `/sessions`
+- `/sessions <query>` (read-only scoped filtering)
 - `/resume`
+- `/resume <query>` (read-only scoped filtering)
 - `/resume N` (where N is a positive integer)
 
 **Rule 4.2: No partial matches.**
@@ -66,6 +68,9 @@ Only these forms are valid commands:
 
 **Rule 4.3: No hidden arguments.**
 `/resume 2 extra` must be treated as invalid, not as `/resume 2`.
+
+**Rule 4.4: Query mode is read-only.**
+`/resume <query>` MUST NOT restore or mutate session state, even when the query has exactly one match. It may only show filtered candidates and instruct the user to use `/resume N`.
 
 ## 5. Response Safety
 
@@ -84,3 +89,5 @@ Error messages must be user-friendly Chinese text. Stack traces, internal file p
 - [ ] Read-back failure returns `readback_failure`, does not report success
 - [ ] `sessions.json` backup exists after every successful restore
 - [ ] Raw session IDs do not appear in any `/sessions` or `/resume` response
+- [ ] `/sessions <query>` and `/resume <query>` filter only after actor and route scope are resolved
+- [ ] `/resume <query>` never mutates session state

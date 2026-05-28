@@ -6,6 +6,7 @@ import type { ActorScope, RouteScope } from '../src/types.js';
 vi.mock('../src/gateway-client.js', () => ({
   GatewayClient: vi.fn().mockImplementation(() => ({
     sessionsList: vi.fn(),
+    chatHistory: vi.fn().mockResolvedValue({ messages: [] }),
   })),
 }));
 
@@ -206,5 +207,115 @@ describe('SessionHistoryService', () => {
     expect(items).toHaveLength(2);
     expect(items.some((i) => i.sessionId === 'dup1' && i.isCurrent)).toBe(true);
     expect(items.some((i) => i.sessionId === 'hist2')).toBe(true);
+  });
+
+  it('filters sessions by a normal title query after scoped listing', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        { key: 'agent:main:wecom-default-弗忧联盟-周威', sessionId: 'newer', title: '普通对话', chatType: 'direct', origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟' }, updatedAt: 3000 },
+        { key: 'agent:main:wecom-default-弗忧联盟-周威', sessionId: 'older', title: 'Testing-B 验收', chatType: 'direct', origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟' }, updatedAt: 1000 },
+      ],
+    });
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route, 'Testing-B');
+
+    expect(items).toHaveLength(1);
+    expect(items[0].sessionId).toBe('older');
+    expect(items[0].displayIndex).toBe(2);
+  });
+
+  it('returns no sessions when scoped query has no matches', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        { key: 'agent:main:wecom-default-弗忧联盟-周威', sessionId: 's1', title: '普通对话', chatType: 'direct', origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟' }, updatedAt: 1000 },
+      ],
+    });
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route, 'does-not-exist');
+
+    expect(items).toHaveLength(0);
+  });
+
+  it('matches queries case-insensitively', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        { key: 'agent:main:wecom-default-弗忧联盟-周威', sessionId: 's1', title: 'Release Plan', chatType: 'direct', origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟' }, updatedAt: 1000 },
+      ],
+    });
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route, 'release plan');
+
+    expect(items).toHaveLength(1);
+    expect(items[0].sessionId).toBe('s1');
+  });
+
+  it('matches Chinese query text from historical titles and previews', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        { key: 'agent:main:wecom-default-弗忧联盟-周威', sessionId: 'active1', title: '当前对话', chatType: 'direct', origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: '周威' }, updatedAt: 5000 },
+      ],
+    });
+    vi.mocked(scanGenerations).mockResolvedValue([
+      {
+        sessionId: 'hist1',
+        sessionFile: 'hist1.jsonl.reset.xxx',
+        title: '腾讯文档发布问题',
+        updatedAt: new Date(3000),
+        lastMessagePreview: 'OAuth token 过期',
+        isCurrent: false,
+        isRestorable: true,
+      },
+    ]);
+
+    const service = new SessionHistoryService(gateway);
+    const titleMatches = await service.listSessions(actor, route, '腾讯文档');
+    const previewMatches = await service.listSessions(actor, route, 'token 过期');
+
+    expect(titleMatches.map((i) => i.sessionId)).toEqual(['hist1']);
+    expect(previewMatches.map((i) => i.sessionId)).toEqual(['hist1']);
+  });
+
+  it('matches date labels without exposing session ids', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        { key: 'agent:main:wecom-default-弗忧联盟-周威', sessionId: 's1', title: '日期查询', chatType: 'direct', origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟' }, updatedAt: new Date('2026-05-21T19:31:00').getTime() },
+      ],
+    });
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route, '2026-05-21');
+
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe('日期查询');
+  });
+
+  it('does not let query matches cross route or actor safety boundaries', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        { key: 'agent:main:wecom-default-弗忧联盟-周威', sessionId: 'allowed', title: '普通对话', chatType: 'direct', origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟' }, updatedAt: 1000 },
+        { key: 'agent:main:wecom-default-弗忧联盟-学习园地', sessionId: 'blocked-route', title: 'Secret Match', chatType: 'direct', origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟' }, updatedAt: 2000 },
+      ],
+    });
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const routeItems = await service.listSessions(actor, route, 'Secret');
+    const actorItems = await service.listSessions({ ...actor, accountId: 'other-account' }, route, '普通');
+
+    expect(routeItems).toHaveLength(0);
+    expect(actorItems).toHaveLength(0);
   });
 });

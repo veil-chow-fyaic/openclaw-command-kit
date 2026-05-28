@@ -21,8 +21,15 @@ OpenClaw chat commands for session history and resume.
 | Command | Description | Example |
 |---------|-------------|---------|
 | `/sessions` | List current and historical sessions for the current chat route. | `/sessions` |
+| `/sessions <query>` | Filter the current route's session list by title, preview, message snippet, or time label. | `/sessions 腾讯文档` |
 | `/resume` | Show the session list with usage hints. | `/resume` |
+| `/resume <query>` | Show filtered resume candidates without changing session state. | `/resume testing-b` |
 | `/resume N` | Switch to the N-th session in the list. | `/resume 2` |
+
+Query mode is read-only and always runs after actor and route scope have been
+resolved. It never performs global search and never exposes raw session IDs.
+Filtered results keep their original list indexes, so the follow-up command is
+still the explicit `/resume N` shown in the response.
 
 **Example `/sessions` output:**
 
@@ -121,9 +128,9 @@ OpenClaw Core Dispatch
   |
   v
 [Core: Command Router] (channel-agnostic)
-  |-- /sessions  --> SessionHistoryService --> ResponseFormatter
-  |-- /resume    --> SessionHistoryService --> ResponseFormatter
-  |-- /resume N  --> RestoreService        --> ResponseFormatter
+  |-- /sessions [query] --> SessionHistoryService --> ResponseFormatter
+  |-- /resume [query]   --> SessionHistoryService --> ResponseFormatter
+  |-- /resume N         --> RestoreService        --> ResponseFormatter
   |
   v
 OpenClaw Core Dispatch (delivers reply back through same channel)

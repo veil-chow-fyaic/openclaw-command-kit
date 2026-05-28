@@ -1,5 +1,4 @@
-// Parse /sessions, /resume, /resume N; route to services.
-// TODO(Phase 2/3): Wire up to SessionHistoryService and RestoreService.
+// Parse /sessions [query], /resume [query], /resume N; route to services.
 
 import type {
   ActorScope,
@@ -13,6 +12,7 @@ import {
   formatSessionList,
   formatResumeSuccess,
   formatError,
+  formatResumeUsage,
 } from './response-formatter.js';
 
 export class CommandRouter {
@@ -35,19 +35,12 @@ export class CommandRouter {
   ): Promise<CommandResult> {
     const trimmed = rawText.trim();
 
-    if (trimmed === '/sessions') {
-      const items = await this.history.listSessions(actor, route);
+    const sessionsMatch = trimmed.match(/^\/sessions(?:\s+([\s\S]+))?$/);
+    if (sessionsMatch) {
+      const query = sessionsMatch[1]?.trim();
+      const items = await this.history.listSessions(actor, route, query);
       const current = items.find((i) => i.isCurrent);
-      let text = formatSessionList(items, current);
-      text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
-      await adapter.deliverReply(route, text);
-      return { handled: true };
-    }
-
-    if (trimmed === '/resume') {
-      const items = await this.history.listSessions(actor, route);
-      const current = items.find((i) => i.isCurrent);
-      let text = formatSessionList(items, current);
+      let text = formatSessionList(items, current, 10, query);
       text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
       await adapter.deliverReply(route, text);
       return { handled: true };
@@ -56,6 +49,10 @@ export class CommandRouter {
     const resumeMatch = trimmed.match(/^\/resume\s+(\d+)$/);
     if (resumeMatch) {
       const index = parseInt(resumeMatch[1], 10);
+      if (index <= 0) {
+        await adapter.deliverReply(route, formatResumeUsage());
+        return { handled: true };
+      }
       const result = await this.restore.restoreSession(actor, route, index);
       if (result.success && result.restoredSessionId) {
         const items = await this.history.listSessions(actor, route);
@@ -69,6 +66,22 @@ export class CommandRouter {
         const err = result.error ?? 'readback_failure';
         await adapter.deliverReply(route, formatError(err));
       }
+      return { handled: true };
+    }
+
+    if (/^\/resume\s+\d+\s+[\s\S]+$/.test(trimmed)) {
+      await adapter.deliverReply(route, formatResumeUsage());
+      return { handled: true };
+    }
+
+    const resumeQueryMatch = trimmed.match(/^\/resume(?:\s+([\s\S]+))?$/);
+    if (resumeQueryMatch) {
+      const query = resumeQueryMatch[1]?.trim();
+      const items = await this.history.listSessions(actor, route, query);
+      const current = items.find((i) => i.isCurrent);
+      let text = formatSessionList(items, current, 10, query);
+      text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
+      await adapter.deliverReply(route, text);
       return { handled: true };
     }
 

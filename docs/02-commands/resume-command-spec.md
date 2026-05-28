@@ -9,7 +9,9 @@ MVP commands:
 
 ```text
 /sessions
+/sessions 腾讯文档
 /resume
+/resume 腾讯文档
 /resume 2
 ```
 
@@ -147,23 +149,23 @@ OpenClaw 未确认切换完成，后续消息不会被标记为已切换。
 
 ## Query Mode
 
-Phase 2 only:
-
 ```text
+/sessions 腾讯文档
 /resume 腾讯文档
 /resume 昨天
 ```
 
-Query mode must filter scoped sessions only. It may rank by:
+Query mode filters scoped sessions only. It may match:
 
 - exact title/preview match;
-- recent time;
+- display date/time labels;
 - last user message;
 - last assistant message;
 - derived title.
 
-Do not use LLM semantic search for authorization. Semantic search is ranking
-only after exact route scope is already enforced.
+It does not use LLM semantic search, fuzzy dependencies, global search, or
+cross-route lookup. `/resume <query>` is read-only: it shows filtered candidates
+and tells the user to use `/resume N`; it never switches sessions directly.
 
 ## Acceptance Tests
 

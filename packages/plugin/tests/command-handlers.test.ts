@@ -81,8 +81,28 @@ describe('SessionCommandHandlers', () => {
       const result = await handlers.handleSessions(mockCtx());
 
       expect(deriveScopes).toHaveBeenCalledWith(mockCtx(), expect.anything());
-      expect(mockHistory.listSessions).toHaveBeenCalled();
+      expect(mockHistory.listSessions).toHaveBeenCalledWith(
+        mockScopes().actor,
+        mockScopes().route,
+        undefined
+      );
       expect(result.text).toContain('可恢复的历史对话');
+    });
+
+    it('passes /sessions query text to scoped history service', async () => {
+      vi.mocked(deriveScopes).mockResolvedValue(mockScopes());
+      mockHistory.listSessions.mockResolvedValue([
+        mockItem(2, { title: '腾讯文档发布' }),
+      ]);
+
+      const result = await handlers.handleSessions(mockCtx({ args: '腾讯文档' }));
+
+      expect(mockHistory.listSessions).toHaveBeenCalledWith(
+        mockScopes().actor,
+        mockScopes().route,
+        '腾讯文档'
+      );
+      expect(result.text).toContain('腾讯文档发布');
     });
 
     it('returns fail-closed message when scopes are null', async () => {
@@ -104,6 +124,24 @@ describe('SessionCommandHandlers', () => {
 
       expect(result.text).toContain('可恢复的历史对话');
       expect(result.text).toContain('发送 /resume N 切换到第 N 个历史对话。');
+    });
+
+    it('passes /resume query text to scoped history service without restoring', async () => {
+      vi.mocked(deriveScopes).mockResolvedValue(mockScopes());
+      mockHistory.listSessions.mockResolvedValue([
+        mockItem(3, { title: 'Release Plan' }),
+      ]);
+
+      const result = await handlers.handleResume(mockCtx({ args: 'Release' }));
+
+      expect(mockHistory.listSessions).toHaveBeenCalledWith(
+        mockScopes().actor,
+        mockScopes().route,
+        'Release'
+      );
+      expect(mockRestore.restoreSession).not.toHaveBeenCalled();
+      expect(result.text).toContain('Release Plan');
+      expect(result.text).toContain('/resume N');
     });
 
     it('returns fail-closed message when scopes are null', async () => {
