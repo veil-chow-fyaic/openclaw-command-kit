@@ -27,7 +27,7 @@ should still perform the final human release decision before public distribution
 | `AIC-2625` | [#4](https://github.com/veil-chow-fyaic/openclaw-command-kit/pull/4) | Merged | Release distribution and documentation quality |
 | `AIC-2626` | [#5](https://github.com/veil-chow-fyaic/openclaw-command-kit/pull/5) | Merged | Showcase site design specification |
 | `AIC-2627` | [#6](https://github.com/veil-chow-fyaic/openclaw-command-kit/pull/6) | Merged | Static showcase site implementation |
-| `AIC-2628` | Pending review PR | This report | Final release quality gate |
+| `AIC-2628` | [#7](https://github.com/veil-chow-fyaic/openclaw-command-kit/pull/7) | This report | Final release quality gate |
 
 Merged lane head before this report:
 `f3d3e3af18d69a077d8e0ecc3613a7b32f769533`.
@@ -120,7 +120,9 @@ Suggested version for the first public source-install release: `v0.1.0`.
 
 ## Parent Recommendation
 
-Move `AIC-2622` to human acceptance review after the `AIC-2628` PR is merged
+Move `AIC-2622` to human acceptance review after
+[AIC-2628 PR #7](https://github.com/veil-chow-fyaic/openclaw-command-kit/pull/7)
+is merged
 into `liev/openclaw-command-kit-v2`.
 
 Do not close the parent as a production release. Close or advance the parent
