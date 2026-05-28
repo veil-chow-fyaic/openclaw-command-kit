@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="OpenClaw Command Kit provides native source-installed session history and resume commands for OpenClaw."
+    >
+    <title>OpenClaw Command Kit</title>
+    <link rel="stylesheet" href="./assets/site.css">
+  </head>
+  <body>
+    <header class="topbar" aria-label="Primary">
+      <a class="brand" href="#top" aria-label="OpenClaw Command Kit home">
+        <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="25" cy="24" r="4.5"></circle>
+          <path d="M14 17c5-7 16-8 23-1"></path>
+          <path d="M13 31c6 7 18 7 25-1"></path>
+          <path d="M21 12 11 22l10 10"></path>
+          <path d="M31 17h8"></path>
+          <path d="M31 31h8"></path>
+        </svg>
+        <span>Command Kit</span>
+      </a>
+      <nav class="nav-links" aria-label="Showcase sections">
+        <a href="#commands">Commands</a>
+        <a href="#scope">Scope</a>
+        <a href="#install">Install</a>
+        <a href="#architecture">Architecture</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-shell">
+          <div class="hero-copy">
+            <p class="eyebrow">OpenClaw extension plugin</p>
+            <h1 id="hero-title">OpenClaw Command Kit</h1>
+            <p class="hero-lede">
+              Native session commands for OpenClaw: list scoped history, filter safely,
+              and resume by explicit index.
+            </p>
+            <div class="hero-actions" aria-label="Primary actions">
+              <a class="action primary" href="https://github.com/veil-chow-fyaic/openclaw-command-kit">
+                <span aria-hidden="true">↗</span>
+                View GitHub
+              </a>
+              <a
+                class="action"
+                href="https://github.com/veil-chow-fyaic/openclaw-command-kit/blob/main/docs/01-getting-started/installation.md"
+              >
+                <span aria-hidden="true">⌁</span>
+                Read install guide
+              </a>
+            </div>
+            <div class="hero-command-rail" aria-label="Implemented command surface">
+              <code>/sessions</code>
+              <code>/sessions &lt;query&gt;</code>
+              <code>/resume</code>
+              <code>/resume &lt;query&gt;</code>
+              <code>/resume N</code>
+            </div>
+            <p class="release-note">Current release: install from source.</p>
+          </div>
+
+          <div class="route-scene" aria-label="Scoped route map showing session generations and resume index">
+            <div class="scene-grid" aria-hidden="true"></div>
+            <svg class="route-lines" viewBox="0 0 760 420" aria-hidden="true">
+              <path class="route-line route-line-a" d="M78 112 C180 74 260 82 354 130 S540 188 670 126"></path>
+              <path class="route-line route-line-b" d="M88 310 C210 255 324 292 426 240 S590 190 686 300"></path>
+              <path class="route-line route-line-c" d="M185 70 C175 150 230 215 326 225 S492 210 580 346"></path>
+            </svg>
+
+            <div class="route-cell outside outside-left">
+              <span class="route-label">neighbor route</span>
+              <span class="closed-gate" aria-hidden="true"></span>
+            </div>
+
+            <div class="active-route">
+              <span class="route-label">current chat route</span>
+              <span class="scope-ring" aria-hidden="true"></span>
+              <article class="session-leaf current">
+                <span>current</span>
+                <strong>周威</strong>
+                <small>刚刚</small>
+              </article>
+              <article class="session-leaf indexed" data-command-leaf="/sessions">
+                <span>1</span>
+                <strong>腾讯文档发布不了</strong>
+                <small>5月23日 09:36</small>
+              </article>
+              <article class="session-leaf indexed second" data-command-leaf="/resume N">
+                <span>2</span>
+                <strong>B端切换验收</strong>
+                <small>5月21日 19:31</small>
+              </article>
+              <div class="readback-pulse" aria-hidden="true"></div>
+            </div>
+
+            <div class="route-cell outside outside-right">
+              <span class="route-label">group route</span>
+              <span class="closed-gate" aria-hidden="true"></span>
+            </div>
+
+            <div class="command-cursor" aria-label="Command cursor typing /sessions">
+              <span class="cursor-dot" aria-hidden="true"></span>
+              <code>/sessions</code>
+            </div>
+
+            <div class="scoped-list" aria-label="Scoped list preview">
+              <span>scoped list</span>
+              <ol>
+                <li>腾讯文档发布不了</li>
+                <li>B端切换验收</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section command-story" id="commands" aria-labelledby="commands-title">
+        <div class="section-inner split">
+          <div>
+            <p class="eyebrow">Command story</p>
+            <h2 id="commands-title">A small command surface, evaluated before LLM dispatch.</h2>
+            <p>
+              The plugin registers native chat commands through OpenClaw's plugin SDK.
+              Query mode is read-only, and switching always requires the exact displayed index.
+            </p>
+            <div class="command-picker" role="list" aria-label="Command examples">
+              <button class="command-card is-active" type="button" data-command="/sessions" aria-pressed="true">
+                <span class="command-icon" aria-hidden="true">01</span>
+                <span>
+                  <code>/sessions</code>
+                  <small>List current and historical conversations for this route.</small>
+                </span>
+              </button>
+              <button class="command-card" type="button" data-command="/sessions <query>" aria-pressed="false">
+                <span class="command-icon" aria-hidden="true">02</span>
+                <span>
+                  <code>/sessions &lt;query&gt;</code>
+                  <small>Filter by title, preview, message snippet, or time label.</small>
+                </span>
+              </button>
+              <button class="command-card" type="button" data-command="/resume" aria-pressed="false">
+                <span class="command-icon" aria-hidden="true">03</span>
+                <span>
+                  <code>/resume</code>
+                  <small>Show the scoped list with a stronger resume hint.</small>
+                </span>
+              </button>
+              <button class="command-card" type="button" data-command="/resume <query>" aria-pressed="false">
+                <span class="command-icon" aria-hidden="true">04</span>
+                <span>
+                  <code>/resume &lt;query&gt;</code>
+                  <small>Show filtered candidates without changing session state.</small>
+                </span>
+              </button>
+              <button class="command-card" type="button" data-command="/resume N" aria-pressed="false">
+                <span class="command-icon" aria-hidden="true">05</span>
+                <span>
+                  <code>/resume N</code>
+                  <small>Switch to the displayed generation after validation and read-back.</small>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <article class="transcript-panel" aria-live="polite">
+            <div class="panel-header">
+              <span class="status-dot verified" aria-hidden="true"></span>
+              <span id="transcript-title">/sessions response</span>
+            </div>
+            <pre id="command-output">可恢复的历史对话
+
+当前：周威 · 刚刚
+
+1. 腾讯文档发布不了
+   gog 的 OAuth token 过期了... · 5月23日 09:36
+
+2. B端切换验收 testing-b
+   收到，测试正常 · 5月21日 19:31
+
+发送 /resume 2 切换到第 2 个历史对话。</pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="section safety-band" id="scope" aria-labelledby="scope-title">
+        <div class="section-inner split">
+          <div>
+            <p class="eyebrow">Scope safety</p>
+            <h2 id="scope-title">No actor, no route, no action.</h2>
+            <p>
+              Session history is sensitive. Command Kit resolves actor scope and route scope
+              before listing, filtering, or restoring anything.
+            </p>
+            <div class="scope-controls" aria-label="Scope highlighter">
+              <button type="button" class="scope-control is-active" data-scope-control="actor" aria-pressed="true">
+                <span aria-hidden="true">●</span>
+                Actor scope
+              </button>
+              <button type="button" class="scope-control" data-scope-control="route" aria-pressed="false">
+                <span aria-hidden="true">◇</span>
+                Route scope
+              </button>
+            </div>
+          </div>
+
+          <div class="scope-board" data-scope="actor">
+            <div class="scope-orbit actor-orbit" aria-label="Actor scope fields">
+              <h3>Actor</h3>
+              <p>No actor, no action.</p>
+              <div class="scope-tags">
+                <span data-scope-tag="actor">senderId</span>
+                <span data-scope-tag="actor">provider</span>
+                <span data-scope-tag="actor">accountId</span>
+                <span data-scope-tag="actor">organization</span>
+              </div>
+            </div>
+            <div class="scope-orbit route-orbit" aria-label="Route scope fields">
+              <h3>Route</h3>
+              <p>No route, no action.</p>
+              <div class="scope-tags">
+                <span data-scope-tag="route">provider</span>
+                <span data-scope-tag="route">accountId</span>
+                <span data-scope-tag="route">organization</span>
+                <span data-scope-tag="route">chatType</span>
+                <span data-scope-tag="route">sessionKey</span>
+              </div>
+            </div>
+            <ul class="fail-list" aria-label="Fail closed examples">
+              <li>Search happens only after scoped filtering.</li>
+              <li>Display labels are never authorization.</li>
+              <li>Normal responses never expose raw session IDs.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section restore-band" id="restore" aria-labelledby="restore-title">
+        <div class="section-inner split">
+          <div>
+            <p class="eyebrow">Restore path</p>
+            <h2 id="restore-title">The selected generation moves only after validation.</h2>
+            <p>
+              <code>/resume N</code> recomputes the scoped list, maps the displayed index,
+              validates ownership, restores with backup, and reports success only after OpenClaw read-back.
+            </p>
+            <p class="inline-note">Only <code>/resume N</code> switches. Sending <code>2</code> by itself does nothing in MVP.</p>
+            <button class="route-toggle" type="button" id="mismatch-toggle" aria-pressed="false">
+              <span aria-hidden="true">⊘</span>
+              Toggle route mismatch
+            </button>
+          </div>
+
+          <div class="restore-path" id="restore-path" data-mode="verified">
+            <div class="restore-track" aria-hidden="true">
+              <span class="restore-token">2</span>
+            </div>
+            <ol class="restore-steps">
+              <li>
+                <span>1</span>
+                Recompute scoped list
+              </li>
+              <li>
+                <span>2</span>
+                Map displayed index
+              </li>
+              <li>
+                <span>3</span>
+                Validate actor + route
+              </li>
+              <li>
+                <span>4</span>
+                Restore with backup
+              </li>
+              <li>
+                <span>5</span>
+                Read back confirmed
+              </li>
+            </ol>
+            <p class="restore-state" id="restore-state">Verified: selected generation is restored after read-back.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section install-band" id="install" aria-labelledby="install-title">
+        <div class="section-inner">
+          <p class="eyebrow">Install from source</p>
+          <h2 id="install-title">The supported release path is a source checkout linked into OpenClaw.</h2>
+          <div class="install-grid">
+            <ol class="install-steps" aria-label="Source install steps">
+              <li data-install-step>Clone the repository.</li>
+              <li data-install-step>Install dependencies and build all packages.</li>
+              <li data-install-step>Symlink <code>packages/plugin</code> into OpenClaw extensions.</li>
+              <li data-install-step>Configure OpenClaw and restart the gateway.</li>
+              <li data-install-step>Verify with <code>/sessions</code>.</li>
+            </ol>
+            <div class="code-stack">
+              <figure class="code-panel">
+                <figcaption>Source install</figcaption>
+                <pre><code>git clone https://github.com/veil-chow-fyaic/openclaw-command-kit.git
+cd openclaw-command-kit
+npm install
+npm run build
+mkdir -p "$HOME/.openclaw/extensions"
+ln -sfn "$(pwd)/packages/plugin" "$HOME/.openclaw/extensions/openclaw-command-kit"</code></pre>
+              </figure>
+              <figure class="code-panel">
+                <figcaption>OpenClaw config</figcaption>
+                <pre><code>{
+  "plugins": {
+    "allow": ["wecom", "openclaw-command-kit"],
+    "load": {
+      "paths": ["/Users/yourname/.openclaw/extensions/openclaw-command-kit"]
+    },
+    "entries": {
+      "openclaw-command-kit": { "enabled": true }
+    }
+  }
+}</code></pre>
+              </figure>
+              <figure class="code-panel">
+                <figcaption>Restart and verify</figcaption>
+                <pre><code>launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway
+
+# Then send this in any OpenClaw channel:
+/sessions</code></pre>
+              </figure>
+            </div>
+          </div>
+          <p class="release-footnote">
+            npm package names are reserved for a future manual release. They are not the current supported install path.
+          </p>
+        </div>
+      </section>
+
+      <section class="section architecture-band" id="architecture" aria-labelledby="architecture-title">
+        <div class="section-inner">
+          <p class="eyebrow">Architecture</p>
+          <h2 id="architecture-title">OpenClaw remains the source of truth for sessions.</h2>
+          <div class="architecture-flow" aria-label="Command processing flow">
+            <span>Channel Message</span>
+            <span>OpenClaw Core Dispatch</span>
+            <span>Extension Plugin registerCommand()</span>
+            <span>Scope Deriver</span>
+            <span>Core Command Router</span>
+            <span>SessionHistoryService / RestoreService</span>
+            <span>ResponseFormatter</span>
+            <span>Same Channel Reply</span>
+          </div>
+          <div class="package-lanes">
+            <article class="package-panel">
+              <h3><code>packages/core</code></h3>
+              <p>Command router, scope resolvers, session history service, restore service, response formatter, and gateway client.</p>
+            </article>
+            <article class="package-panel">
+              <h3><code>packages/plugin</code></h3>
+              <p>OpenClaw plugin entry, command handlers, scope reverse-lookup, and plugin manifest.</p>
+            </article>
+          </div>
+          <ul class="boundary-list">
+            <li>No WeCom Side Panel fallback.</li>
+            <li>No local user/contact/session mapping pool.</li>
+            <li>No generic agent-runtime abstraction.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section docs-band" id="docs" aria-labelledby="docs-title">
+        <div class="section-inner docs-inner">
+          <div>
+            <p class="eyebrow">Docs and handoff</p>
+            <h2 id="docs-title">Everything points back to the repository contract.</h2>
+          </div>
+          <nav class="doc-links" aria-label="Documentation links">
+            <a href="https://github.com/veil-chow-fyaic/openclaw-command-kit">GitHub repository</a>
+            <a href="https://github.com/veil-chow-fyaic/openclaw-command-kit/blob/main/docs/01-getting-started/quickstart.md">Quick start</a>
+            <a href="https://github.com/veil-chow-fyaic/openclaw-command-kit/blob/main/docs/01-getting-started/installation.md">Installation guide</a>
+            <a href="https://github.com/veil-chow-fyaic/openclaw-command-kit/blob/main/docs/02-commands/command-catalog.md">Command catalog</a>
+            <a href="https://github.com/veil-chow-fyaic/openclaw-command-kit/blob/main/docs/03-design/security-contract.md">Security contract</a>
+            <a href="https://github.com/veil-chow-fyaic/openclaw-command-kit/blob/main/docs/03-design/architecture.md">Architecture</a>
+          </nav>
+          <p class="release-footnote">
+            Release status: source install today. Future npm package names are reserved, not currently published.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./assets/site.js"></script>
+  </body>
+</html>
