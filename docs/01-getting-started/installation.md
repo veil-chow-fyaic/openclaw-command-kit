@@ -6,12 +6,15 @@ Complete guide for installing, configuring, and upgrading OpenClaw Command Kit.
 
 - [System Requirements](#system-requirements)
 - [Install from Source](#install-from-source)
-- [Install from npm](#install-from-npm)
+- [Distribution and npm Status](#distribution-and-npm-status)
+- [Compatibility and Versioning](#compatibility-and-versioning)
+- [Build Artifacts](#build-artifacts)
 - [Configure OpenClaw](#configure-openclaw)
 - [Restart Gateway](#restart-gateway)
 - [Verify Installation](#verify-installation)
 - [Upgrade](#upgrade)
 - [Uninstall](#uninstall)
+- [Troubleshooting](#troubleshooting)
 
 ## System Requirements
 
@@ -30,7 +33,8 @@ openclaw --version  # should print a version number
 
 ## Install from Source
 
-Best for development or when you need the latest unreleased fixes.
+This is the current supported install path. It is suitable for local evaluation,
+development, and deployments that can build from source.
 
 ```bash
 # 1. Clone
@@ -51,26 +55,66 @@ npm run test:run
 
 ```bash
 # Create symlink so OpenClaw loads the plugin
-ln -s $(pwd)/packages/plugin ~/.openclaw/extensions/openclaw-command-kit
+mkdir -p "$HOME/.openclaw/extensions"
+ln -sfn "$(pwd)/packages/plugin" "$HOME/.openclaw/extensions/openclaw-command-kit"
 ```
 
 > **Note:** Do NOT copy the `dist` folder alone. The symlink ensures OpenClaw reads `package.json`, `openclaw.plugin.json`, and the compiled JS together.
 
-## Install from npm
+## Distribution and npm Status
 
-Best for production deployments.
+The workspace reserves these npm package names for a future release:
+
+- `@openclaw-commands/core`
+- `@openclaw-commands/openclaw-command-kit`
+
+They are not part of the current supported install path. Do not document or
+operate a deployment as npm-based until a maintainer has manually published the
+packages and tagged a release.
+
+When npm publishing is later approved, the intended install shape is:
 
 ```bash
 npm install -g @openclaw-commands/openclaw-command-kit
 ```
 
-Then add to `~/.openclaw/openclaw.json`:
+and the intended config shape is:
 
 ```json
 {
   "extensions": ["@openclaw-commands/openclaw-command-kit"]
 }
 ```
+
+Until that release exists, use the source install above.
+
+For the complete release policy, see
+[Release and Distribution](../03-design/release-distribution.md).
+
+## Compatibility and Versioning
+
+OpenClaw Command Kit currently targets:
+
+- Node.js `>=18.0.0`.
+- OpenClaw `>=0.1.0` with `plugin-sdk` command registration.
+- OpenClaw CLI access through `openclaw gateway call`.
+
+The current package version is `0.1.0`. Until a `1.0.0` release, treat the
+OpenClaw plugin integration and package API as pre-1.0 SemVer: usable, tested,
+and documented, but still allowed to change between minor versions.
+
+## Build Artifacts
+
+`packages/core/dist/**` and `packages/plugin/dist/**` are committed on purpose.
+The source install links `packages/plugin`, and OpenClaw loads the compiled
+entry at `packages/plugin/dist/src/index.js`.
+
+Do not copy only `dist` into OpenClaw extensions. Link the package directory so
+OpenClaw can read package metadata, `openclaw.plugin.json`, and compiled JS
+together.
+
+Root-level `dist/`, `node_modules/`, logs, and local environment files remain
+ignored.
 
 ## Configure OpenClaw
 
@@ -92,13 +136,15 @@ Edit `~/.openclaw/openclaw.json` and add the plugin entry.
 }
 ```
 
-### Minimal Config (npm install)
+### Future npm Config
 
 ```json
 {
   "extensions": ["@openclaw-commands/openclaw-command-kit"]
 }
 ```
+
+Use this only after a real npm release is published.
 
 ### Full Config Example
 
@@ -139,8 +185,10 @@ Wait 5–10 seconds for the gateway to fully initialize.
 Send these commands in any OpenClaw channel:
 
 1. `/sessions` — should list current + historical sessions.
-2. `/resume` — should show the same list with usage hints.
-3. `/resume 1` — should switch to the first historical session (if any exist).
+2. `/sessions <query>` — should filter only this route's authorized sessions.
+3. `/resume` — should show the same list with usage hints.
+4. `/resume <query>` — should show filtered candidates without switching.
+5. `/resume 1` — should switch to the first historical session (if any exist).
 
 If any command is not recognized, check:
 
@@ -162,12 +210,14 @@ npm run build
 launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway
 ```
 
-### Upgrade from npm
+### Future npm Upgrade
 
 ```bash
 npm update -g @openclaw-commands/openclaw-command-kit
 launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway
 ```
+
+Use this only after npm publishing is complete.
 
 > **Always restart the gateway after upgrading.** The running process holds compiled JavaScript in memory; file changes alone do not take effect until restart.
 
@@ -184,7 +234,7 @@ rm ~/.openclaw/extensions/openclaw-command-kit
 launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway
 ```
 
-### Uninstall npm Install
+### Future npm Uninstall
 
 ```bash
 npm uninstall -g @openclaw-commands/openclaw-command-kit
@@ -192,3 +242,16 @@ npm uninstall -g @openclaw-commands/openclaw-command-kit
 # Restart gateway
 launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway
 ```
+
+Use this only after npm publishing is complete.
+
+## Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| Command is not recognized | Gateway has not loaded the plugin. | Confirm the absolute path in `openclaw.json`, run `npm run build`, then restart the gateway. |
+| `packages/plugin/dist/src/index.js` is missing | The source checkout was linked before build output existed. | Run `npm run build` from the repo root. |
+| `/sessions` returns no history | The current actor and route have no resumable history. | Send a normal message in that route first, then try `/sessions` again. |
+| `/sessions <query>` or `/resume <query>` returns no matches | Query filtering happens only after actor and route scope are enforced. | Run `/sessions` without a query and search for text that appears in the returned title, preview, message snippet, or time label. |
+| `/resume 2 extra` shows usage | Hidden arguments after a numeric resume are invalid. | Use exactly `/resume N` or use `/resume <query>` as a read-only filter. |
+| Rebuilt code is not reflected | OpenClaw keeps compiled plugin code in memory. | Restart the gateway after every rebuild or upgrade. |

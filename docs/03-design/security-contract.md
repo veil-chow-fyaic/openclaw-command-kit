@@ -91,3 +91,25 @@ Error messages must be user-friendly Chinese text. Stack traces, internal file p
 - [ ] Raw session IDs do not appear in any `/sessions` or `/resume` response
 - [ ] `/sessions <query>` and `/resume <query>` filter only after actor and route scope are resolved
 - [ ] `/resume <query>` never mutates session state
+
+## 7. Release and Distribution Safety
+
+**Rule 7.1: Source install is the only current supported install path.**
+Documentation may reserve npm package names for future publishing, but it must
+not claim npm availability until a maintainer has manually published and tagged
+a release.
+
+**Rule 7.2: No release shortcut from command docs.**
+Documentation and metadata updates must not perform npm publishing, merge to
+`main`, change GitHub settings, access secrets, or modify OpenClaw production
+configuration.
+
+**Rule 7.3: Build artifacts stay explicit.**
+The committed `packages/*/dist` files are generated artifacts used by source
+installs and package contents. Users must build or consume a released package;
+they must not copy a bare `dist` directory as a complete plugin install.
+
+**Rule 7.4: Public docs must preserve project boundaries.**
+Release docs must keep this project OpenClaw-specific and channel-agnostic.
+They must not introduce WeCom Side Panel fallbacks, bridge-local mapping pools,
+or generic agent-runtime promises.

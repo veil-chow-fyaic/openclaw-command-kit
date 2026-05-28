@@ -3,12 +3,17 @@
 OpenClaw Command Kit is a channel-agnostic extension plugin that provides native
 OpenClaw chat commands for session history and resume.
 
+Current release status: install from source. The workspace contains package
+metadata for a future public npm release, but no npm package should be assumed
+available until a release note says so.
+
 ## Table of Contents
 
 - [Commands](#commands)
 - [Quick Start](#quick-start)
 - [Installation](#installation)
 - [Architecture](#architecture)
+- [Release & Distribution](#release--distribution)
 - [Documentation](#documentation)
 - [Build & Test](#build--test)
 - [Upgrading](#upgrading)
@@ -68,13 +73,14 @@ OpenClaw：收到，测试正常
 
 ```bash
 # Clone and build
-git clone <repo-url> openclaw-command-kit
+git clone https://github.com/veil-chow-fyaic/openclaw-command-kit.git
 cd openclaw-command-kit
 npm install
 npm run build
 
 # Symlink plugin into OpenClaw extensions
-ln -s $(pwd)/packages/plugin ~/.openclaw/extensions/openclaw-command-kit
+mkdir -p "$HOME/.openclaw/extensions"
+ln -sfn "$(pwd)/packages/plugin" "$HOME/.openclaw/extensions/openclaw-command-kit"
 ```
 
 Add to `~/.openclaw/openclaw.json`:
@@ -105,10 +111,10 @@ For full details, see the [Quick Start Guide](docs/01-getting-started/quickstart
 
 ## Installation
 
-- **Development**: [Install from Source](docs/01-getting-started/installation.md#install-from-source)
-- **Production**: [Install from npm](docs/01-getting-started/installation.md#install-from-npm)
+- **Current supported path**: [Install from Source](docs/01-getting-started/installation.md#install-from-source)
 - **Configuration**: [Configure OpenClaw](docs/01-getting-started/installation.md#configure-openclaw)
 - **Upgrade / Uninstall**: [Upgrade](docs/01-getting-started/installation.md#upgrade) / [Uninstall](docs/01-getting-started/installation.md#uninstall)
+- **Release status**: [Distribution and npm status](docs/01-getting-started/installation.md#distribution-and-npm-status)
 
 System requirements: Node.js >= 18, OpenClaw >= 0.1.0.
 
@@ -140,6 +146,28 @@ The plugin is implemented as an **OpenClaw Extension Plugin** using the `opencla
 
 For the full architecture document, see [Architecture](docs/03-design/architecture.md).
 
+## Release & Distribution
+
+The supported distribution mode today is source install:
+
+- clone this repo;
+- build the workspace;
+- link `packages/plugin` into `~/.openclaw/extensions/openclaw-command-kit`;
+- configure OpenClaw to load `openclaw-command-kit`;
+- restart the gateway.
+
+The root package remains `private: true` because it is a monorepo workspace, not
+the runtime package. Workspace package metadata reserves
+`@openclaw-commands/core` and `@openclaw-commands/openclaw-command-kit` for a
+future public npm release, but this issue does not publish npm packages.
+
+Package-level `dist` directories are committed intentionally. Source installs
+need `packages/plugin/dist/src/index.js`, and future npm packages will ship
+compiled `dist` output through each package's `files` list. Root-level `dist`,
+`node_modules`, logs, and local environment files stay ignored.
+
+For details, see [Release and Distribution](docs/03-design/release-distribution.md).
+
 ## Documentation
 
 ### Getting Started
@@ -154,6 +182,7 @@ For the full architecture document, see [Architecture](docs/03-design/architectu
 - [Architecture](docs/03-design/architecture.md) — Component diagram, data model, and implementation phases
 - [Channel Interaction](docs/03-design/channel-interaction.md) — Actor scope, route scope, and selection flow
 - [Implementation Plan](docs/03-design/implementation-plan.md) — Task breakdown and risk register
+- [Release and Distribution](docs/03-design/release-distribution.md) — Source install, future npm path, versioning, metadata, and dist strategy
 - [Roadmap](docs/03-design/roadmap.md) — Phase 0 through Phase 4 roadmap
 - [Security Contract](docs/03-design/security-contract.md) — Non-negotiable safety rules
 

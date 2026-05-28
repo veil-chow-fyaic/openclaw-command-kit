@@ -21,7 +21,9 @@ Codex CLI, Kimi Code, or Gemini CLI.
 | Command | Decision | Rationale | Safety boundary |
 |---|---|---|---|
 | `/sessions` | Copy | Mainstream agents expose session browsers or resume lists. OpenClaw lacks a native chat-route history list. | Read-only. Requires actor scope and exact route scope before listing. Never shows raw session IDs. |
+| `/sessions <query>` | Copy | Users need to narrow long scoped lists without opening a global search surface. | Read-only. Filters only after actor and route scope are resolved. |
 | `/resume` | Adapt | Terminal tools open an interactive picker. In chat, bare `/resume` should show the same scoped list plus the exact next command. | Read-only. Same authorization and formatting rules as `/sessions`. |
+| `/resume <query>` | Adapt | Chat users need a safe candidate filter before choosing an explicit numeric restore. | Read-only. Shows filtered candidates and never switches directly. |
 | `/resume N` | Adapt | Channel users need a deterministic replacement for picker selection. An explicit numeric command is simple and auditable. | Mutating. Recomputes the scoped list, validates the selected item, backs up `sessions.json`, restores, and requires `chat.history` read-back before success. |
 
 ## Rejected For V2 MVP
@@ -38,8 +40,6 @@ Codex CLI, Kimi Code, or Gemini CLI.
 
 | Candidate | Decision | Why later |
 |---|---|---|
-| `/sessions <query>` | Later | Useful after exact scoped listing is proven. Search must run only after actor and route filtering. |
-| `/resume <query>` | Later | Needs ambiguity handling and confirmation semantics. Numeric restore is safer for the first mutating path. |
 | `/fork` or `/branch` | Later | Valuable for long sessions, but requires clear transcript ownership and restore semantics first. |
 | `/rename` or `/title` | Later | Requires OpenClaw-native session metadata ownership. Do not introduce a sidecar mapping pool. |
 | `/export` or `/share` | Later | Requires privacy review and channel-specific file delivery behavior. |
@@ -72,8 +72,8 @@ contract.
 
 KISS: the first command set has one read-only list path and one restore path.
 
-YAGNI: search, fork, rename, export, diagnostics, and runtime controls are
-explicitly deferred until the scoped restore path is proven.
+YAGNI: fork, rename, export, diagnostics, and runtime controls are explicitly
+deferred until the scoped restore path is proven.
 
 DRY: `/sessions` and `/resume` share the same scoped list service and formatter;
 `/resume N` recomputes through the same service before mutating.

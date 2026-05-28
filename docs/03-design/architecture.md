@@ -14,7 +14,8 @@ The commands are implemented as an **OpenClaw Extension Plugin** using the
 - Execution before built-in commands and LLM dispatch
 - Automatic reply delivery back through the same channel
 - No modification to OpenClaw source code or compiled `dist/`
-- Independent packaging and distribution via npm
+- Independent package metadata for a future npm release; current installs build
+  from source and link `packages/plugin`
 
 It should not depend on:
 
@@ -45,7 +46,7 @@ The plugin receives `PluginCommandContext` which contains `senderId`, `channel`,
 Parses:
 
 - `/sessions`
-- `/sessions <count|query>`
+- `/sessions <query>`
 - `/resume`
 - `/resume <number|query>`
 
@@ -172,14 +173,15 @@ Implement OpenClaw extension plugin in `packages/plugin/`:
 - `command-handlers.ts` — delegate to core services
 - `index.ts` — `OpenClawPluginDefinition` with `registerCommand()` calls
 
-### Phase 3: Search And Interaction
+### Phase 3: Search
 
-Add:
+Implemented:
 
 - `/sessions <query>`;
 - `/resume <query>`;
-- optional pending selection state;
-- better session titles and summaries.
+
+Future interaction work, such as pending selection state or richer titles, must
+stay actor- and route-scoped.
 
 ## Security Notes
 

@@ -66,7 +66,8 @@ formatting, but they are not authorization by themselves.
 Inputs:
 
 - current message context;
-- optional count argument, default 5, max 10 for MVP.
+- optional query text. Numeric arguments to `/sessions` are treated as read-only
+  query text, not as a count and never as a switch command.
 
 Output:
 
@@ -78,7 +79,7 @@ Formatting constraints:
 
 - ordinary users should see title, time, and preview;
 - do not show raw ids by default;
-- show no more than 5 items by default;
+- show no more than 10 items by default;
 - keep message short enough for chat.
 
 ## `/resume`
@@ -132,7 +133,7 @@ Missing route:
 Invalid number:
 
 ```text
-没有第 7 个对话。请发送 /sessions 查看可选项。
+没有第 N 个对话。请发送 /sessions 查看可选项。
 ```
 
 Route mismatch:

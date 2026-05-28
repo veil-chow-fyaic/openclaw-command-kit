@@ -150,14 +150,14 @@ OpenClaw：收到，测试正常
 | Condition | Response |
 |-----------|----------|
 | Invalid number | `用法：/resume N（N 为对话编号）` |
-| Index out of range | `没有第 7 个对话。请发送 /sessions 查看可选项。` |
+| Index out of range | `没有第 N 个对话。请发送 /sessions 查看可选项。` |
 | Route mismatch | `这个对话不属于当前聊天，已拒绝切换。` |
 | Store not found | `OpenClaw 会话存储未找到。` |
 | Read-back failure | `OpenClaw 未确认切换完成，后续消息不会被标记为已切换。` |
 
 ---
 
-## Planned Commands (Phase 2+)
+## Future Commands
 
 These are not yet implemented.
 
@@ -187,6 +187,10 @@ Operator diagnostic command showing:
 - current session id
 
 Not shown as a normal-user feature.
+
+Query filtering is already implemented in this release for `/sessions <query>`
+and `/resume <query>`. Future commands should reuse the same actor and route
+scope checks before reading or mutating any OpenClaw session state.
 
 ---
 
