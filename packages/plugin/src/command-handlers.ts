@@ -35,9 +35,10 @@ export class SessionCommandHandlers {
       return { text: '无法确认当前聊天范围，请稍后再试。' };
     }
 
-    const items = await this.history.listSessions(scopes.actor, scopes.route);
+    const query = getCommandQuery(ctx);
+    const items = await this.history.listSessions(scopes.actor, scopes.route, query);
     const current = items.find((i) => i.isCurrent);
-    let text = formatSessionList(items, current);
+    let text = formatSessionList(items, current, 10, query);
     text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
     return { text };
   }
@@ -48,9 +49,10 @@ export class SessionCommandHandlers {
       return { text: '无法确认当前聊天范围，请稍后再试。' };
     }
 
-    const items = await this.history.listSessions(scopes.actor, scopes.route);
+    const query = getCommandQuery(ctx);
+    const items = await this.history.listSessions(scopes.actor, scopes.route, query);
     const current = items.find((i) => i.isCurrent);
-    let text = formatSessionList(items, current);
+    let text = formatSessionList(items, current, 10, query);
     text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
     return { text };
   }
@@ -77,4 +79,9 @@ export class SessionCommandHandlers {
     const err = result.error ?? 'readback_failure';
     return { text: formatError(err) };
   }
+}
+
+function getCommandQuery(ctx: PluginCommandContext): string | undefined {
+  const query = (ctx.args ?? '').trim();
+  return query || undefined;
 }

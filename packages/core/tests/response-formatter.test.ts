@@ -21,6 +21,11 @@ describe('formatSessionList', () => {
     expect(text).toBe('当前聊天还没有可恢复的历史对话。');
   });
 
+  it('returns no-match message for empty query results', () => {
+    const text = formatSessionList([], undefined, 10, '腾讯文档');
+    expect(text).toBe('当前聊天没有匹配“腾讯文档”的历史对话。');
+  });
+
   it('formats list with preview and time on second line', () => {
     const items = [
       makeItem({ displayIndex: 1, title: '腾讯文档发布不了', updatedAt: new Date('2026-05-23T09:36:00'), lastMessagePreview: 'gog 的 OAuth token 过期了' }),

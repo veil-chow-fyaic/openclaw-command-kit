@@ -53,7 +53,21 @@ describe('CommandRouter', () => {
 
     const result = await router.handle('/sessions', actor, route, adapter);
     expect(result.handled).toBe(true);
+    expect(history.listSessions).toHaveBeenCalledWith(actor, route, undefined);
     expect(adapter.deliverReply).toHaveBeenCalled();
+  });
+
+  it('handles /sessions query as read-only filtered listing', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    history.listSessions.mockResolvedValue([makeItem({ title: '腾讯文档发布' })]);
+
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/sessions 腾讯文档', actor, route, adapter);
+    expect(result.handled).toBe(true);
+    expect(history.listSessions).toHaveBeenCalledWith(actor, route, '腾讯文档');
+    expect(restore.restoreSession).not.toHaveBeenCalled();
   });
 
   it('handles /resume (no arg)', async () => {
@@ -65,6 +79,21 @@ describe('CommandRouter', () => {
 
     const result = await router.handle('/resume', actor, route, adapter);
     expect(result.handled).toBe(true);
+    const replyText = (adapter.deliverReply as any).mock.calls[0][1];
+    expect(replyText).toContain('/resume N');
+  });
+
+  it('handles /resume query as read-only filtered guidance', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    history.listSessions.mockResolvedValue([makeItem({ title: 'Release Plan' })]);
+
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/resume Release', actor, route, adapter);
+    expect(result.handled).toBe(true);
+    expect(history.listSessions).toHaveBeenCalledWith(actor, route, 'Release');
+    expect(restore.restoreSession).not.toHaveBeenCalled();
     const replyText = (adapter.deliverReply as any).mock.calls[0][1];
     expect(replyText).toContain('/resume N');
   });
@@ -103,12 +132,15 @@ describe('CommandRouter', () => {
     expect(result.handled).toBe(false);
   });
 
-  it('rejects extra arguments on /resume N', async () => {
+  it('rejects hidden extra arguments on /resume N without mutating', async () => {
     const history = new SessionHistoryService({} as any) as any;
     const restore = new RestoreService({} as any, history) as any;
     const router = new CommandRouter(history, restore);
 
     const result = await router.handle('/resume 2 extra', actor, route, adapter);
-    expect(result.handled).toBe(false);
+    expect(result.handled).toBe(true);
+    expect(restore.restoreSession).not.toHaveBeenCalled();
+    const replyText = (adapter.deliverReply as any).mock.calls[0][1];
+    expect(replyText).toContain('用法');
   });
 });

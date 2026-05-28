@@ -1,16 +1,17 @@
-// OpenClaw extension plugin: /sessions, /resume, /resume N
+// OpenClaw extension plugin: /sessions [query], /resume [query], /resume N
 //
 // Installation: place this package in ~/.openclaw/extensions/openclaw-command-kit/
 // (or npm link / npm install -g then reference in openclaw.json).
 
 import { emptyPluginConfigSchema } from 'openclaw/plugin-sdk';
 import type { OpenClawPluginApi, OpenClawPluginDefinition } from 'openclaw/plugin-sdk/plugin-entry';
+import { formatResumeUsage } from '@openclaw-commands/core';
 import { SessionCommandHandlers } from './command-handlers.js';
 
 const plugin: OpenClawPluginDefinition = {
   id: 'openclaw-command-kit',
   name: 'OpenClaw Command Kit',
-  description: 'Native session commands: /sessions, /resume, /resume N',
+  description: 'Native session commands: /sessions [query], /resume [query], /resume N',
   configSchema: emptyPluginConfigSchema(),
   register(api: OpenClawPluginApi) {
     const handlers = new SessionCommandHandlers();
@@ -18,7 +19,7 @@ const plugin: OpenClawPluginDefinition = {
     api.registerCommand({
       name: 'sessions',
       description: '列出当前聊天可恢复的历史对话',
-      acceptsArgs: false,
+      acceptsArgs: true,
       requireAuth: true,
       handler: (ctx) => handlers.handleSessions(ctx),
     });
@@ -34,11 +35,14 @@ const plugin: OpenClawPluginDefinition = {
           return handlers.handleResume(ctx);
         }
         if (!/^\d+$/.test(args)) {
-          return { text: '用法：/resume N（N 为对话编号）' };
+          if (/^\d+\s+[\s\S]+$/.test(args)) {
+            return { text: formatResumeUsage() };
+          }
+          return handlers.handleResume(ctx);
         }
         const index = parseInt(args, 10);
         if (index <= 0) {
-          return { text: '用法：/resume N（N 为对话编号）' };
+          return { text: formatResumeUsage() };
         }
         return handlers.handleResumeByIndex(ctx, index);
       },

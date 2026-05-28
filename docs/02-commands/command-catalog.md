@@ -16,6 +16,9 @@ These commands are implemented and ready to use.
 
 ```text
 /sessions
+/sessions 腾讯文档
+/sessions testing-b
+/sessions 2026-05-21
 ```
 
 **Example Response:**
@@ -41,13 +44,17 @@ These commands are implemented and ready to use.
 3. Scans local transcript backups (`.jsonl.reset.*`, `.jsonl.deleted.*`) for historical generations matching the route label.
 4. Merges active + historical, deduplicates by `sessionId`, sorts by `updatedAt` descending.
 5. Assigns display indexes (1, 2, 3...).
-6. Formats a compact numbered list.
+6. If a query is present, filters the already scoped list by display-safe fields:
+   title, preview, last user/assistant snippets, and date/time labels.
+7. Formats a compact numbered list.
 
 **Constraints:**
 
 - Only shows sessions belonging to the exact current route (`provider + accountId + organization + chatType + sessionKey`).
 - Never falls back to global search.
 - Hides raw `sessionId` values; only display indexes are shown.
+- Query filtering preserves original display indexes so `/resume N` still maps
+  to the freshly recomputed scoped list.
 
 **Error Responses:**
 
@@ -56,6 +63,7 @@ These commands are implemented and ready to use.
 | No history | `当前聊天还没有可恢复的历史对话。` |
 | Missing actor | `无法确认当前用户身份，已拒绝查看历史对话。` |
 | Missing route | `无法确认当前聊天范围，已拒绝查看历史对话。` |
+| Query has no matches | `当前聊天没有匹配“腾讯文档”的历史对话。` |
 
 ---
 
@@ -69,20 +77,27 @@ These commands are implemented and ready to use.
 
 ```text
 /resume
+/resume 腾讯文档
+/resume testing-b
 ```
 
 **What it does:**
 
-Identical to `/sessions`, but the final line emphasizes how to switch:
+Without a query, identical to `/sessions`, but the final line emphasizes how to switch:
 
 ```text
 发送 /resume 2 切换到第 2 个历史对话。
 ```
 
+With a query, filters the already scoped candidate list and returns guidance to
+use the displayed `/resume N` command. It does **not** switch sessions directly,
+even when there is exactly one match.
+
 **Why it exists:**
 
 - `/sessions` answers "what can I resume?"
 - `/resume` answers "how do I resume?"
+- `/resume <query>` answers "which scoped sessions match this text?"
 
 ---
 
@@ -145,30 +160,6 @@ OpenClaw：收到，测试正常
 ## Planned Commands (Phase 2+)
 
 These are not yet implemented.
-
-### `/sessions <query>`
-
-Filter the scoped list by title, summary, preview, or time.
-
-```text
-/sessions 腾讯文档
-/sessions testing-b
-/sessions 昨天
-```
-
-### `/resume <query>`
-
-Resolve a query to one scoped conversation.
-
-```text
-/resume 腾讯文档
-```
-
-Rules:
-
-- If exactly one strong match exists, switch directly or ask for confirmation.
-- If multiple matches exist, show a numbered list.
-- If no match exists, report failure without mutating state.
 
 ### `/fork`
 

@@ -8,6 +8,7 @@ import type { ActorScope, RouteScope } from '../src/types.js';
 vi.mock('../src/gateway-client.js', () => ({
   GatewayClient: vi.fn().mockImplementation(() => ({
     sessionsList: vi.fn(),
+    chatHistory: vi.fn().mockResolvedValue({ messages: [] }),
   })),
 }));
 

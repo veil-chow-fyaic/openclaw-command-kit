@@ -1,11 +1,12 @@
 // List scoped sessions via Gateway RPC + local transcript scan for historical generations.
 import { scanGenerations } from './session-generation-scanner.js';
+import { filterSessionsByQuery } from './session-query.js';
 export class SessionHistoryService {
     gateway;
     constructor(gateway) {
         this.gateway = gateway;
     }
-    async listSessions(actor, route) {
+    async listSessions(actor, route, query) {
         // Fail-closed: actor must be valid and consistent with route
         if (!actor.senderId)
             return [];
@@ -115,7 +116,7 @@ export class SessionHistoryService {
         merged.forEach((item, idx) => {
             item.displayIndex = idx + 1;
         });
-        return merged;
+        return filterSessionsByQuery(merged, query);
     }
     _toItem(raw, route) {
         const sessionId = raw.sessionId;

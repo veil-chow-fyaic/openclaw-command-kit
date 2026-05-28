@@ -7,7 +7,9 @@ OpenClaw extension plugin providing native session commands.
 | Command | Description |
 |---------|-------------|
 | `/sessions` | List current and historical sessions for the current chat route. |
+| `/sessions <query>` | Filter the scoped session list without global search. |
 | `/resume` | Show the session list (same as `/sessions`). |
+| `/resume <query>` | Show filtered resume candidates without switching sessions. |
 | `/resume N` | Switch to the N-th session in the list. |
 
 ## Install
