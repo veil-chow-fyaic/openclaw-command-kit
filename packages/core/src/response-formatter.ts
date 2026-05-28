@@ -15,21 +15,19 @@ export function formatSessionList(
   lines.push('');
 
   if (currentItem) {
-    lines.push(`当前：${currentItem.title} · ${formatRelativeTime(currentItem.updatedAt)}`);
+    lines.push(`当前：${formatSmartTime(currentItem.updatedAt)} · ${currentItem.title}`);
     lines.push('');
   }
 
   const displayItems = items.slice(0, maxItems);
   for (const item of displayItems) {
-    const timeStr = formatDateTime(item.updatedAt);
+    const timeStr = formatSmartTime(item.updatedAt);
     const preview = item.lastMessagePreview
       ? truncate(item.lastMessagePreview, 40)
       : '';
-    lines.push(`${item.displayIndex}. ${item.title}`);
+    lines.push(`${item.displayIndex}. ${item.title} · ${timeStr}`);
     if (preview) {
-      lines.push(`   ${preview} · ${timeStr}`);
-    } else {
-      lines.push(`   ${timeStr}`);
+      lines.push(`   ${preview}`);
     }
   }
 
@@ -43,7 +41,7 @@ export function formatSessionList(
 export function formatResumeSuccess(item: ResumeListItem): string {
   const parts: string[] = ['已切换到历史对话', ''];
   parts.push(`对话：${item.title}`);
-  parts.push(`时间：${formatDateTime(item.updatedAt)}`);
+  parts.push(`时间：${formatSmartTime(item.updatedAt)}`);
 
   if (item.lastUserMessage || item.lastAssistantMessage) {
     parts.push('');
@@ -83,16 +81,7 @@ export function formatError(error: 'actor' | 'route' | 'invalid_index' | 'route_
   }
 }
 
-function formatDateTime(d: Date): string {
-  return d.toLocaleString('zh-CN', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function formatRelativeTime(d: Date): string {
+function formatSmartTime(d: Date): string {
   const now = Date.now();
   const diff = now - d.getTime();
   const minutes = Math.floor(diff / 60000);
@@ -100,7 +89,16 @@ function formatRelativeTime(d: Date): string {
   if (minutes < 60) return `${minutes} 分钟前`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} 小时前`;
-  return formatDateTime(d);
+  const days = Math.floor(hours / 24);
+  const timeStr = d.toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  if (days === 1) return `昨天 ${timeStr}`;
+  if (days < 7) return `${days} 天前 ${timeStr}`;
+  return d.toLocaleString('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function truncate(text: string, maxLen: number): string {
