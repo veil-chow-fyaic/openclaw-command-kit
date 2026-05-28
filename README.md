@@ -15,6 +15,7 @@ available until a release note says so.
 - [Architecture](#architecture)
 - [Release & Distribution](#release--distribution)
 - [Documentation](#documentation)
+- [Showcase Site](#showcase-site)
 - [Build & Test](#build--test)
 - [Upgrading](#upgrading)
 - [Non-goals](#non-goals)
@@ -192,6 +193,27 @@ For details, see [Release and Distribution](docs/03-design/release-distribution.
 - [Prior Art](docs/04-reference/prior-art.md) — Community research and related projects
 - [Research Notes](docs/04-reference/research-notes.md) — Local OpenClaw observations and external references
 
+## Showcase Site
+
+The repository includes a local static showcase for the Command Kit product
+story. It documents the implemented command surface, scope safety model, restore
+path, source-install flow, and package architecture without claiming npm
+availability.
+
+```bash
+# Preview the source site locally
+npm run site:dev
+
+# Build the static site into site/dist
+npm run site:build
+
+# Preview the built output
+npm run site:preview
+```
+
+The supported release path remains source install. The showcase should not be
+treated as a production deploy target.
+
 ## Build & Test
 
 ```bash
@@ -203,6 +225,9 @@ npm run test:run
 
 # Type check without emitting
 npm run lint
+
+# Build the local showcase site
+npm run site:build
 ```
 
 ## Upgrading

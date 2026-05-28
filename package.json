@@ -13,7 +13,10 @@
     "test": "vitest",
     "test:run": "vitest run",
     "check": "npm run check --workspaces",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "site:dev": "node scripts/site-server.mjs",
+    "site:build": "node scripts/site-build.mjs",
+    "site:preview": "node scripts/site-server.mjs --dist"
   },
   "repository": {
     "type": "git",
