@@ -4,7 +4,6 @@ import {
   GatewayClient,
   SessionHistoryService,
   RestoreService,
-  CommandRouter,
   formatSessionList,
   formatResumeSuccess,
   formatError,
@@ -16,7 +15,6 @@ export class SessionCommandHandlers {
   private gateway: GatewayClient;
   private history: SessionHistoryService;
   private restore: RestoreService;
-  private router: CommandRouter;
 
   constructor(
     gateway?: GatewayClient,
@@ -26,7 +24,6 @@ export class SessionCommandHandlers {
     this.gateway = gateway ?? new GatewayClient();
     this.history = history ?? new SessionHistoryService(this.gateway);
     this.restore = restore ?? new RestoreService(this.gateway, this.history);
-    this.router = new CommandRouter(this.history, this.restore);
   }
 
   async handleSessions(ctx: PluginCommandContext): Promise<PluginCommandResult> {

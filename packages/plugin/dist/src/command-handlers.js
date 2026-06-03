@@ -1,16 +1,14 @@
 // Command handlers for /sessions, /resume, /resume N.
-import { GatewayClient, SessionHistoryService, RestoreService, CommandRouter, formatSessionList, formatResumeSuccess, formatError, } from '@openclaw-commands/core';
+import { GatewayClient, SessionHistoryService, RestoreService, formatSessionList, formatResumeSuccess, formatError, } from '@openclaw-commands/core';
 import { deriveScopes } from './scope-deriver.js';
 export class SessionCommandHandlers {
     gateway;
     history;
     restore;
-    router;
     constructor(gateway, history, restore) {
         this.gateway = gateway ?? new GatewayClient();
         this.history = history ?? new SessionHistoryService(this.gateway);
         this.restore = restore ?? new RestoreService(this.gateway, this.history);
-        this.router = new CommandRouter(this.history, this.restore);
     }
     async handleSessions(ctx) {
         const scopes = await deriveScopes(ctx, this.gateway);

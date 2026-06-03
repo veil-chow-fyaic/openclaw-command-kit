@@ -4,7 +4,6 @@ export declare class SessionCommandHandlers {
     private gateway;
     private history;
     private restore;
-    private router;
     constructor(gateway?: GatewayClient, history?: SessionHistoryService, restore?: RestoreService);
     handleSessions(ctx: PluginCommandContext): Promise<PluginCommandResult>;
     handleResume(ctx: PluginCommandContext): Promise<PluginCommandResult>;
