@@ -69,8 +69,9 @@ export async function deriveScopes(
   const organization = origin.organization?.trim() || undefined;
   const chatType = normalizeChatType(origin.chatType || '');
 
-  // 3. Construct sessionKey in a channel-aware way
-  const sessionKey = buildSessionKey(channel, accountId, organization, to);
+  // 3. Use the matched session's actual key (avoids rebuild mismatch when
+  // origin.organization is absent).
+  const sessionKey = extractSessionKey(match.key || '');
   if (!sessionKey) return null;
 
   const route = resolveRouteScope({
@@ -120,22 +121,9 @@ function normalizeChatType(raw: string): RouteScope['chatType'] {
   return 'unknown';
 }
 
-function buildSessionKey(
-  channel: string,
-  accountId: string | undefined,
-  organization: string | undefined,
-  chatLabel: string
-): string | null {
-  const acc = accountId ?? 'default';
-  // OpenClaw lower-cases the chatLabel when constructing the session key.
-  const label = chatLabel.toLowerCase();
-
-  if (channel === 'wecom') {
-    const org = organization ?? 'unknown';
-    return `wecom-${acc}-${org}-${label}`;
-  }
-
-  // Fallback: try to reconstruct from raw session key if available.
-  // For unknown channels we cannot safely build a key without knowing the format.
-  return null;
+function extractSessionKey(agentPrefixed: string): string {
+  const idx = agentPrefixed.lastIndexOf(':');
+  if (idx === -1) return agentPrefixed;
+  return agentPrefixed.slice(idx + 1);
 }
+
