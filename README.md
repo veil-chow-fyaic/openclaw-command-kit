@@ -29,13 +29,13 @@ OpenClaw chat commands for session history and resume.
 ```text
 可恢复的历史对话
 
-当前：周威 · 刚刚
+当前：刚刚 · 新对话
 
-1. 腾讯文档发布不了
-   gog 的 OAuth token 过期了... · 5月23日 09:36
+1. 腾讯文档发布不了 · 5月23日 09:36
+   gog 的 OAuth token 过期了...
 
-2. B端切换验收 testing-b
-   收到，测试正常 · 5月21日 19:31
+2. B端切换验收 testing-b · 昨天 19:31
+   收到，测试正常
 
 发送 /resume 2 切换到第 2 个历史对话。
 ```
