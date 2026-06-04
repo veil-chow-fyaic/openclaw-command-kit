@@ -57,7 +57,16 @@ OpenClaw：收到，测试正常
 
 ## Quick Start
 
-5-minute setup for development:
+### One-line install (after npm package is published)
+
+```bash
+npx openclaw-slash-kit install
+```
+
+This verifies OpenClaw, installs the plugin, updates `~/.openclaw/openclaw.json`,
+and restarts the gateway.
+
+### Development setup
 
 ```bash
 # Clone and build
