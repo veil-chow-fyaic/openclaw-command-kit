@@ -169,6 +169,20 @@ npm run test:run
 npm run lint
 ```
 
+## Release
+
+Publish both workspace packages to npm with a single guarded command:
+
+```bash
+# Preview what would happen (safe, default)
+node scripts/publish/release.mjs --dry-run
+
+# Execute the real release
+node scripts/publish/release.mjs --real
+```
+
+See [`scripts/publish/README.md`](scripts/publish/README.md) for safety features and full flow.
+
 ## Upgrading
 
 After pulling or rebuilding:
