@@ -13,8 +13,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
 
 const DRY_RUN = !process.argv.includes("--real");
-const PACKAGES = ["packages/core", "packages/plugin"];
-const PACKAGE_NAMES = ["@openclaw-commands/core", "@openclaw-commands/openclaw-command-kit"];
+const PACKAGES = ["packages/core", "packages/plugin", "packages/cli"];
+const PACKAGE_NAMES = [
+  "@openclaw-commands/core",
+  "@openclaw-commands/openclaw-command-kit",
+  "openclaw-slash-kit",
+];
 
 function run(cmd, opts = {}) {
   const { cwd = ROOT, capture = true } = opts;
