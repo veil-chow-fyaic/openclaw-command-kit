@@ -7,3 +7,5 @@ dist/
 .claude/
 LOOP_PROMPT.md
 *.log
+.liev/
+WORKFLOW.md
