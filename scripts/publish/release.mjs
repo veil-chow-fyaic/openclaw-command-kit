@@ -89,19 +89,31 @@ async function main() {
 
   // 2. Npm login check
   step("Checking npm login");
-  try {
-    const whoami = run("npm whoami");
-    console.log(`  Logged in as: ${whoami}`);
-  } catch {
-    fail("Not logged into npm. Run: npm login");
+  if (DRY_RUN) {
+    console.log("  [DRY-RUN] skipping npm login check");
+  } else {
+    try {
+      const whoami = run("npm whoami");
+      console.log(`  Logged in as: ${whoami}`);
+    } catch {
+      fail("Not logged into npm. Run: npm login");
+    }
   }
 
   // 3. Test + build
   step("Running tests");
-  run("npm run test:run", { capture: false });
+  if (DRY_RUN) {
+    console.log("  [DRY-RUN] skipping tests");
+  } else {
+    run("npm run test:run", { capture: false });
+  }
 
   step("Running build");
-  run("npm run build", { capture: false });
+  if (DRY_RUN) {
+    console.log("  [DRY-RUN] skipping build");
+  } else {
+    run("npm run build", { capture: false });
+  }
 
   // 4. Version bump
   step("Current versions");
