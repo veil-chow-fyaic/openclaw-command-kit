@@ -61,14 +61,35 @@ ln -s $(pwd)/packages/plugin ~/.openclaw/extensions/openclaw-command-kit
 Best for production deployments.
 
 ```bash
+openclaw plugins install @openclaw-commands/openclaw-command-kit
+```
+
+Or install manually via npm and link:
+
+```bash
 npm install -g @openclaw-commands/openclaw-command-kit
+
+# Get the global install path
+npm root -g
+
+# Then symlink into OpenClaw extensions
+ln -s $(npm root -g)/@openclaw-commands/openclaw-command-kit \
+  ~/.openclaw/extensions/openclaw-command-kit
 ```
 
 Then add to `~/.openclaw/openclaw.json`:
 
 ```json
 {
-  "extensions": ["@openclaw-commands/openclaw-command-kit"]
+  "plugins": {
+    "allow": ["openclaw-command-kit"],
+    "load": {
+      "paths": ["/Users/yourname/.openclaw/extensions/openclaw-command-kit"]
+    },
+    "entries": {
+      "openclaw-command-kit": { "enabled": true }
+    }
+  }
 }
 ```
 
@@ -96,7 +117,15 @@ Edit `~/.openclaw/openclaw.json` and add the plugin entry.
 
 ```json
 {
-  "extensions": ["@openclaw-commands/openclaw-command-kit"]
+  "plugins": {
+    "allow": ["openclaw-command-kit"],
+    "load": {
+      "paths": ["/Users/yourname/.openclaw/extensions/openclaw-command-kit"]
+    },
+    "entries": {
+      "openclaw-command-kit": { "enabled": true }
+    }
+  }
 }
 ```
 

@@ -1,5 +1,11 @@
 {
   "id": "openclaw-command-kit",
+  "name": "OpenClaw Command Kit",
+  "description": "Native session commands: /sessions, /resume, /resume N",
+  "activation": {
+    "onStartup": false
+  },
+  "enabledByDefault": true,
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
