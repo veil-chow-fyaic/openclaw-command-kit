@@ -123,7 +123,7 @@ function normalizeChatType(raw: string): RouteScope['chatType'] {
 
 function extractSessionKey(agentPrefixed: string): string {
   const idx = agentPrefixed.lastIndexOf(':');
-  if (idx === -1) return agentPrefixed;
-  return agentPrefixed.slice(idx + 1);
+  if (idx === -1) return agentPrefixed.toLowerCase();
+  return agentPrefixed.slice(idx + 1).toLowerCase();
 }
 
