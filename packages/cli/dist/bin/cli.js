@@ -6,7 +6,7 @@
 import { installCommand } from '../commands/install.js';
 import { publishCommand } from '../commands/publish.js';
 const args = process.argv.slice(2);
-const command = args[0] ?? 'help';
+const command = args[0] ?? 'install';
 async function main() {
     switch (command) {
         case 'install':
@@ -22,9 +22,10 @@ async function main() {
             console.log(`openclaw-slash-kit
 
 Usage:
-  openclaw-slash-kit install              Install the Command Kit plugin on this device
-  openclaw-slash-kit publish [bump]       Publish a new release (patch|minor|major)
-  openclaw-slash-kit help                 Show this help
+  openclaw-slash-kit                    Install the Command Kit plugin on this device (default)
+  openclaw-slash-kit install            Same as above
+  openclaw-slash-kit publish [bump]     Publish a new release (patch|minor|major)
+  openclaw-slash-kit help               Show this help
 `);
             process.exit(command === 'help' || command === '--help' || command === '-h' ? 0 : 1);
     }
