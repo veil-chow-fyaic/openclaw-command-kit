@@ -1,13 +1,13 @@
 {
   "name": "openclaw-slash-kit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "CLI for installing and publishing the OpenClaw Command Kit extension plugin.",
   "type": "module",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "bin": {
-    "openclaw-slash-kit": "./dist/bin/cli.js",
-    "osk": "./dist/bin/cli.js"
+    "openclaw-slash-kit": "dist/bin/cli.js",
+    "osk": "dist/bin/cli.js"
   },
   "files": [
     "dist",
