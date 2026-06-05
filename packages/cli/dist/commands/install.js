@@ -16,7 +16,7 @@ function run(cmd, opts = {}) {
 }
 function hasCommand(cmd) {
     try {
-        execSync(`command -v ${cmd}`, { stdio: "ignore" });
+        execSync(`${cmd} --version`, { stdio: "ignore" });
         return true;
     }
     catch {

@@ -19,7 +19,7 @@ function run(cmd: string, opts: { cwd?: string; capture?: boolean } = {}) {
 
 function hasCommand(cmd: string): boolean {
   try {
-    execSync(`command -v ${cmd}`, { stdio: "ignore" });
+    execSync(`${cmd} --version`, { stdio: "ignore" });
     return true;
   } catch {
     return false;
