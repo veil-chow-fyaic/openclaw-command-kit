@@ -92,9 +92,17 @@ export async function installCommand(_args: string[]) {
 
   // 3. Restart gateway
   console.log("\nRestarting OpenClaw gateway...");
+  const platform = process.platform;
   try {
-    run(`launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway`, { capture: false });
-    console.log("  Gateway restarted.");
+    if (platform === "darwin") {
+      run(`launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway`, { capture: false });
+      console.log("  Gateway restarted.");
+    } else if (platform === "win32") {
+      run(`powershell -Command "Get-Process *openclaw* | Stop-Process -Force; Start-Sleep -s 2; Start-Process openclaw"`, { capture: false });
+      console.log("  Gateway restarted.");
+    } else {
+      console.log("  Please restart OpenClaw manually to apply changes.");
+    }
   } catch {
     console.log("  Could not restart gateway automatically. Please restart OpenClaw manually.");
   }
