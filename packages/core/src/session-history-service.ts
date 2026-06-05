@@ -151,7 +151,7 @@ export class SessionHistoryService {
 
     // Scope matching
     const origin = raw.origin ?? {};
-    if (origin.provider && origin.provider !== route.provider) return null;
+    if (origin.provider && origin.provider.toLowerCase() !== route.provider) return null;
     if (route.accountId && origin.accountId && origin.accountId !== route.accountId) return null;
     if (route.organization && origin.organization && origin.organization !== route.organization) return null;
 
@@ -161,8 +161,8 @@ export class SessionHistoryService {
       if (rawChatType !== route.chatType) return null;
     }
 
-    // Session key matching: must match route.sessionKey exactly
-    if (sessionKey !== route.sessionKey) return null;
+    // Session key matching: must match route.sessionKey (case-insensitive)
+    if (sessionKey.toLowerCase() !== route.sessionKey.toLowerCase()) return null;
 
     const updatedAt = raw.updatedAt ? new Date(raw.updatedAt) : new Date();
     const title = raw.title || raw.displayName || origin.label || '未命名对话';
@@ -183,10 +183,10 @@ function extractSessionKey(rawKey: string): string | null {
   if (rawKey.startsWith('agent:')) {
     const parts = rawKey.split(':');
     if (parts.length >= 3) {
-      return parts.slice(2).join(':');
+      return parts.slice(2).join(':').toLowerCase();
     }
   }
-  return rawKey || null;
+  return (rawKey || '').toLowerCase() || null;
 }
 
 function normalizeChatType(raw: string): RouteScope['chatType'] {
