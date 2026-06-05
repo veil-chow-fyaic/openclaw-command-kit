@@ -52,11 +52,11 @@ export async function installCommand(_args: string[]) {
   console.log(`  OpenClaw: ${version}\n`);
 
   // 2. Prefer openclaw plugins install if package is on npm
-  const npmCheck = await isPackageOnNpm("@openclaw-commands/openclaw-command-kit");
+  const npmCheck = await isPackageOnNpm("@fyaic/openclaw-command-kit");
 
   if (npmCheck) {
     console.log("Installing from npm...");
-    run("openclaw plugins install @openclaw-commands/openclaw-command-kit", { capture: false });
+    run("openclaw plugins install @fyaic/openclaw-command-kit", { capture: false });
   } else {
     console.log("npm package not found; falling back to source install.");
     console.log("Please run this from the openclaw-command-kit repo root:");

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { deriveScopes } from '../src/scope-deriver.js';
-import { GatewayClient } from '@openclaw-commands/core';
+import { GatewayClient } from '@fyaic/core';
 
 function mockGateway(sessions: any[]) {
   return {

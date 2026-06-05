@@ -1,4 +1,4 @@
-// Public API surface for @openclaw-commands/core
+// Public API surface for @fyaic/openclaw-command-core
 export { GatewayClient, GatewayError } from './gateway-client.js';
 export { resolveActorScope } from './actor-scope-resolver.js';
 export { resolveRouteScope } from './route-scope-resolver.js';

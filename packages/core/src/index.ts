@@ -1,4 +1,4 @@
-// Public API surface for @openclaw-commands/core
+// Public API surface for @fyaic/openclaw-command-core
 
 export type {
   ActorScope,

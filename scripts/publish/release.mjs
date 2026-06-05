@@ -15,8 +15,8 @@ const ROOT = path.resolve(__dirname, "../..");
 const DRY_RUN = !process.argv.includes("--real");
 const PACKAGES = ["packages/core", "packages/plugin", "packages/cli"];
 const PACKAGE_NAMES = [
-  "@openclaw-commands/core",
-  "@openclaw-commands/openclaw-command-kit",
+  "@fyaic/core",
+  "@fyaic/openclaw-command-kit",
   "openclaw-slash-kit",
 ];
 

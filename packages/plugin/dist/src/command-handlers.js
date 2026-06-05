@@ -1,5 +1,5 @@
 // Command handlers for /sessions, /resume, /resume N.
-import { GatewayClient, SessionHistoryService, RestoreService, formatSessionList, formatResumeSuccess, formatError, } from '@openclaw-commands/core';
+import { GatewayClient, SessionHistoryService, RestoreService, formatSessionList, formatResumeSuccess, formatError, } from '@fyaic/core';
 import { deriveScopes } from './scope-deriver.js';
 export class SessionCommandHandlers {
     gateway;

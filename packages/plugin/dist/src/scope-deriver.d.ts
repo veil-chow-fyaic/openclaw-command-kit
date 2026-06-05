@@ -1,5 +1,5 @@
-import { GatewayClient } from '@openclaw-commands/core';
-import type { ActorScope, RouteScope } from '@openclaw-commands/core';
+import { GatewayClient } from '@fyaic/core';
+import type { ActorScope, RouteScope } from '@fyaic/core';
 export interface DeriveResult {
     actor: ActorScope;
     route: RouteScope;

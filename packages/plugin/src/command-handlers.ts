@@ -7,7 +7,7 @@ import {
   formatSessionList,
   formatResumeSuccess,
   formatError,
-} from '@openclaw-commands/core';
+} from '@fyaic/core';
 import type { PluginCommandContext, PluginCommandResult } from 'openclaw/plugin-sdk/plugin-entry';
 import { deriveScopes } from './scope-deriver.js';
 

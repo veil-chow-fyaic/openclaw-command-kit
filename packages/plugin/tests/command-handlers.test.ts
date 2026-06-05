@@ -7,7 +7,7 @@ import {
   formatSessionList,
   formatResumeSuccess,
   formatError,
-} from '@openclaw-commands/core';
+} from '@fyaic/core';
 import type { PluginCommandContext } from 'openclaw/plugin-sdk/plugins/types';
 
 vi.mock('../src/scope-deriver.js', () => ({

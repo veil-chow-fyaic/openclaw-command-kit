@@ -1,7 +1,7 @@
 // Derive ActorScope + RouteScope from PluginCommandContext by reverse-lookup
 // through sessions.list. PluginCommandContext does NOT expose sessionKey or
 // organization directly, but the session store contains them in origin/deliveryContext.
-import { resolveActorScope, resolveRouteScope, } from '@openclaw-commands/core';
+import { resolveActorScope, resolveRouteScope, } from '@fyaic/core';
 /**
  * Derive scopes from PluginCommandContext fields.
  *

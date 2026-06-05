@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw-commands/core",
+  "name": "@fyaic/core",
   "version": "0.1.1",
   "description": "Core library for OpenClaw session commands: session history, resume, and restore services.",
   "type": "module",

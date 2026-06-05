@@ -1,4 +1,4 @@
-import { GatewayClient, SessionHistoryService, RestoreService } from '@openclaw-commands/core';
+import { GatewayClient, SessionHistoryService, RestoreService } from '@fyaic/core';
 import type { PluginCommandContext, PluginCommandResult } from 'openclaw/plugin-sdk/plugin-entry';
 export declare class SessionCommandHandlers {
     private gateway;
