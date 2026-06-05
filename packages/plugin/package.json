@@ -21,7 +21,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@openclaw-commands/core": "*"
+    "@openclaw-commands/core": "^0.1.0"
   },
   "peerDependencies": {
     "openclaw": ">=0.1.0"
