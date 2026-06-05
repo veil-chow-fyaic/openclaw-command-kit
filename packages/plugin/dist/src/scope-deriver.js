@@ -89,7 +89,7 @@ function normalizeChatType(raw) {
 function extractSessionKey(agentPrefixed) {
     const idx = agentPrefixed.lastIndexOf(':');
     if (idx === -1)
-        return agentPrefixed;
-    return agentPrefixed.slice(idx + 1);
+        return agentPrefixed.toLowerCase();
+    return agentPrefixed.slice(idx + 1).toLowerCase();
 }
 //# sourceMappingURL=scope-deriver.js.map
