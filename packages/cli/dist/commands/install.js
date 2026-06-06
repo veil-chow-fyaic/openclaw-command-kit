@@ -49,8 +49,14 @@ export async function installCommand(_args) {
     // 2. Prefer openclaw plugins install if package is on npm
     const npmCheck = await isPackageOnNpm("@fyaic/openclaw-command-kit");
     if (npmCheck) {
-        console.log("Installing from npm...");
-        run("openclaw plugins install @fyaic/openclaw-command-kit", { capture: false });
+        if (isPluginInstalled()) {
+            console.log("Plugin already installed. Updating from npm...");
+            run("openclaw plugins update @fyaic/openclaw-command-kit", { capture: false });
+        }
+        else {
+            console.log("Installing from npm...");
+            run("openclaw plugins install @fyaic/openclaw-command-kit", { capture: false });
+        }
     }
     else {
         console.log("npm package not found; falling back to source install.");
@@ -107,6 +113,15 @@ async function isPackageOnNpm(name) {
     try {
         execSync(`npm view ${name} version`, { stdio: "ignore" });
         return true;
+    }
+    catch {
+        return false;
+    }
+}
+function isPluginInstalled() {
+    try {
+        const out = execSync("openclaw plugins list", { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] });
+        return out.includes("openclaw-command-kit");
     }
     catch {
         return false;
