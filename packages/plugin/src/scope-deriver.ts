@@ -9,10 +9,12 @@ import {
 } from '@fyaic/core';
 import type { ActorScope, RouteScope, GatewaySession } from '@fyaic/core';
 
-export interface DeriveResult {
+export interface DeriveSuccess {
   actor: ActorScope;
   route: RouteScope;
 }
+
+export type DeriveResult = DeriveSuccess | { reason: 'actor' | 'route' };
 
 /**
  * Derive scopes from PluginCommandContext fields.
@@ -33,14 +35,14 @@ export async function deriveScopes(
   },
   gateway: GatewayClient,
   agentId: string = 'main'
-): Promise<DeriveResult | null> {
+): Promise<DeriveResult> {
   const channel = ctx.channel.trim().toLowerCase();
   const accountId = ctx.accountId?.trim() || undefined;
   const to = ctx.to?.trim() || undefined;
   const senderId = ctx.senderId?.trim() || '';
 
-  if (!senderId) return null;
-  if (!to) return null;
+  if (!senderId) return { reason: 'actor' };
+  if (!to) return { reason: 'route' };
 
   // 1. Build ActorScope from what we know
   const actor = resolveActorScope({
@@ -49,7 +51,7 @@ export async function deriveScopes(
     accountId,
   });
 
-  if (!actor) return null;
+  if (!actor) return { reason: 'actor' };
 
   // 2. Reverse-lookup route metadata via sessions.list
   const listResult = await gateway.sessionsList({ agentId, limit: 100 });
@@ -62,7 +64,7 @@ export async function deriveScopes(
   if (!match) {
     // No existing session for this route — we cannot derive organization or chatType.
     // Fail closed: without a scoped session we have nothing to list or resume.
-    return null;
+    return { reason: 'route' };
   }
 
   const origin = match.origin ?? {};
@@ -72,7 +74,7 @@ export async function deriveScopes(
   // 3. Use the matched session's actual key (avoids rebuild mismatch when
   // origin.organization is absent).
   const sessionKey = extractSessionKey(match.key || '');
-  if (!sessionKey) return null;
+  if (!sessionKey) return { reason: 'route' };
 
   const route = resolveRouteScope({
     provider: channel,
@@ -84,7 +86,7 @@ export async function deriveScopes(
     threadId: normalizeThreadId(ctx.messageThreadId),
   });
 
-  if (!route) return null;
+  if (!route) return { reason: 'route' };
 
   return { actor, route };
 }

@@ -5,8 +5,9 @@ export declare class SessionCommandHandlers {
     private history;
     private restore;
     constructor(gateway?: GatewayClient, history?: SessionHistoryService, restore?: RestoreService);
-    handleSessions(ctx: PluginCommandContext): Promise<PluginCommandResult>;
+    handleSessions(ctx: PluginCommandContext, query?: string): Promise<PluginCommandResult>;
     handleResume(ctx: PluginCommandContext): Promise<PluginCommandResult>;
     handleResumeByIndex(ctx: PluginCommandContext, index: number): Promise<PluginCommandResult>;
+    handleWhereami(ctx: PluginCommandContext): Promise<PluginCommandResult>;
 }
 //# sourceMappingURL=command-handlers.d.ts.map

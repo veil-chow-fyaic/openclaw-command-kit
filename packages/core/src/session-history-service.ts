@@ -26,7 +26,8 @@ export class SessionHistoryService {
 
   async listSessions(
     actor: ActorScope,
-    route: RouteScope
+    route: RouteScope,
+    query?: string
   ): Promise<ResumeListItem[]> {
     // Fail-closed: actor must be valid and consistent with route
     if (!actor.senderId) return [];
@@ -133,12 +134,25 @@ export class SessionHistoryService {
     const merged = [...activeItems, ...historicalItems];
     merged.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
+    // Apply query filter if provided
+    const filtered = query
+      ? merged.filter((item) => {
+          const q = query.toLowerCase();
+          return (
+            item.title.toLowerCase().includes(q) ||
+            item.lastMessagePreview.toLowerCase().includes(q) ||
+            item.lastUserMessage?.toLowerCase().includes(q) ||
+            false
+          );
+        })
+      : merged;
+
     // Assign display indexes (1-based)
-    merged.forEach((item, idx) => {
+    filtered.forEach((item, idx) => {
       item.displayIndex = idx + 1;
     });
 
-    return merged;
+    return filtered;
   }
 
   private _toItem(raw: RawSession, route: RouteScope): ResumeListItem | null {

@@ -10,6 +10,7 @@ export declare class RestoreService {
     private _validateBelongsToRoute;
     private _resolveRouteKeys;
     private _atomicWriteJsonWithBackup;
+    private _cleanupOldBackups;
     private _readBackConfirmed;
 }
 //# sourceMappingURL=restore-service.d.ts.map

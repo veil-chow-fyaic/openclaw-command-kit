@@ -38,7 +38,10 @@ export class GatewayClient {
                         reject(new GatewayError(`OpenClaw CLI not found: ${this.cliPath}`, 'cli_not_found'));
                         return;
                     }
-                    reject(new GatewayError(`Gateway call '${method}' failed: ${stderr || error.message}`.trim(), 'rpc_failed', { returnCode: error.code }));
+                    const safeMsg = stderr
+                        ? 'Gateway RPC 调用失败（stderr 已隐藏）。'
+                        : `Gateway call '${method}' failed`;
+                    reject(new GatewayError(safeMsg, 'rpc_failed', { returnCode: error.code }));
                     return;
                 }
                 let parsed;

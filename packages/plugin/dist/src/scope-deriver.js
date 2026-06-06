@@ -16,9 +16,9 @@ export async function deriveScopes(ctx, gateway, agentId = 'main') {
     const to = ctx.to?.trim() || undefined;
     const senderId = ctx.senderId?.trim() || '';
     if (!senderId)
-        return null;
+        return { reason: 'actor' };
     if (!to)
-        return null;
+        return { reason: 'route' };
     // 1. Build ActorScope from what we know
     const actor = resolveActorScope({
         provider: channel,
@@ -26,7 +26,7 @@ export async function deriveScopes(ctx, gateway, agentId = 'main') {
         accountId,
     });
     if (!actor)
-        return null;
+        return { reason: 'actor' };
     // 2. Reverse-lookup route metadata via sessions.list
     const listResult = await gateway.sessionsList({ agentId, limit: 100 });
     const sessions = listResult.sessions ?? [];
@@ -34,7 +34,7 @@ export async function deriveScopes(ctx, gateway, agentId = 'main') {
     if (!match) {
         // No existing session for this route — we cannot derive organization or chatType.
         // Fail closed: without a scoped session we have nothing to list or resume.
-        return null;
+        return { reason: 'route' };
     }
     const origin = match.origin ?? {};
     const organization = origin.organization?.trim() || undefined;
@@ -43,7 +43,7 @@ export async function deriveScopes(ctx, gateway, agentId = 'main') {
     // origin.organization is absent).
     const sessionKey = extractSessionKey(match.key || '');
     if (!sessionKey)
-        return null;
+        return { reason: 'route' };
     const route = resolveRouteScope({
         provider: channel,
         sessionKey,
@@ -54,7 +54,7 @@ export async function deriveScopes(ctx, gateway, agentId = 'main') {
         threadId: normalizeThreadId(ctx.messageThreadId),
     });
     if (!route)
-        return null;
+        return { reason: 'route' };
     return { actor, route };
 }
 function normalizeThreadId(threadId) {

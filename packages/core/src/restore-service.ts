@@ -169,9 +169,33 @@ export class RestoreService {
   private _atomicWriteJsonWithBackup(storePath: string, data: unknown): void {
     const backupPath = `${storePath}.backup.${Date.now()}`;
     fs.copyFileSync(storePath, backupPath);
+    fs.chmodSync(backupPath, 0o600);
     const tmpPath = `${storePath}.tmp.${process.pid}.${crypto.randomUUID()}`;
-    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
     fs.renameSync(tmpPath, storePath);
+    this._cleanupOldBackups(storePath, 10);
+  }
+
+  private _cleanupOldBackups(storePath: string, keepCount: number): void {
+    const dir = path.dirname(storePath);
+    const baseName = path.basename(storePath);
+    const prefix = `${baseName}.backup.`;
+    try {
+      const entries = fs.readdirSync(dir);
+      const backups = entries
+        .filter((e) => e.startsWith(prefix))
+        .map((e) => ({ name: e, path: path.join(dir, e), mtime: fs.statSync(path.join(dir, e)).mtime.getTime() }))
+        .sort((a, b) => b.mtime - a.mtime);
+      for (const b of backups.slice(keepCount)) {
+        try {
+          fs.unlinkSync(b.path);
+        } catch {
+          // ignore cleanup errors
+        }
+      }
+    } catch {
+      // ignore readdir errors
+    }
   }
 
   private async _readBackConfirmed(sessionKey: string, expectedSessionId: string): Promise<boolean> {

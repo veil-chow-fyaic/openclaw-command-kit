@@ -1,9 +1,12 @@
 import { GatewayClient } from '@fyaic/core';
 import type { ActorScope, RouteScope } from '@fyaic/core';
-export interface DeriveResult {
+export interface DeriveSuccess {
     actor: ActorScope;
     route: RouteScope;
 }
+export type DeriveResult = DeriveSuccess | {
+    reason: 'actor' | 'route';
+};
 /**
  * Derive scopes from PluginCommandContext fields.
  *
@@ -19,5 +22,5 @@ export declare function deriveScopes(ctx: {
     to?: string;
     senderId?: string;
     messageThreadId?: string | number;
-}, gateway: GatewayClient, agentId?: string): Promise<DeriveResult | null>;
+}, gateway: GatewayClient, agentId?: string): Promise<DeriveResult>;
 //# sourceMappingURL=scope-deriver.d.ts.map

@@ -62,14 +62,17 @@ export function formatResumeSuccess(item: ResumeListItem): string {
   return parts.join('\n');
 }
 
-export function formatError(error: 'actor' | 'route' | 'invalid_index' | 'route_mismatch' | 'readback_failure' | 'store_error'): string {
+export function formatError(
+  error: 'actor' | 'route' | 'invalid_index' | 'route_mismatch' | 'readback_failure' | 'store_error',
+  params?: { index?: number }
+): string {
   switch (error) {
     case 'actor':
       return '无法确认当前用户身份，已拒绝查看历史对话。';
     case 'route':
       return '无法确认当前聊天范围，已拒绝查看历史对话。';
     case 'invalid_index':
-      return '没有第 N 个对话。请发送 /sessions 查看可选项。';
+      return `没有第 ${params?.index ?? 'N'} 个对话。请发送 /sessions 查看可选项。`;
     case 'route_mismatch':
       return '这个对话不属于当前聊天，已拒绝切换。';
     case 'readback_failure':
