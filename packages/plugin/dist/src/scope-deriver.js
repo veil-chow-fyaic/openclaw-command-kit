@@ -41,7 +41,7 @@ export async function deriveScopes(ctx, gateway, agentId = 'main') {
     const chatType = normalizeChatType(origin.chatType || '');
     // 3. Use the matched session's actual key (avoids rebuild mismatch when
     // origin.organization is absent).
-    const sessionKey = extractSessionKey(match.key || '');
+    const sessionKey = extractSessionKey(match.key || match.sessionKey || '');
     if (!sessionKey)
         return { reason: 'route' };
     const route = resolveRouteScope({

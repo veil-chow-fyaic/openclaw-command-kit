@@ -131,7 +131,7 @@ export class SessionHistoryService {
         const sessionId = raw.sessionId;
         if (!sessionId)
             return null;
-        const rawKey = raw.key ?? '';
+        const rawKey = raw.key ?? raw.sessionKey ?? '';
         const sessionKey = extractSessionKey(rawKey);
         if (!sessionKey)
             return null;
