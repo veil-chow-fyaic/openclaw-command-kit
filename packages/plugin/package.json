@@ -1,6 +1,6 @@
 {
   "name": "@fyaic/openclaw-command-kit",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "OpenClaw extension plugin providing /sessions and /resume commands.",
   "type": "module",
   "main": "./dist/src/index.js",

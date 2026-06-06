@@ -66,9 +66,11 @@ function normalizeThreadId(threadId) {
 function deliveryContextMatches(session, channel, accountId, to) {
     const dc = session.deliveryContext ?? {};
     const dcChannel = (dc.channel ?? '').trim().toLowerCase();
-    const dcTo = (dc.to ?? '').trim().toLowerCase();
     const dcAccountId = (dc.accountId ?? '').trim() || undefined;
-    const normalizedTo = to.trim().toLowerCase();
+    // Normalize "to" values by stripping provider prefix (e.g. "wecom:Alice" -> "Alice")
+    const normalizedTo = stripProviderPrefix(to.trim().toLowerCase(), channel);
+    const dcTo = stripProviderPrefix((dc.to ?? '').trim().toLowerCase(), channel);
+    const originTo = stripProviderPrefix((session.origin?.to ?? '').trim().toLowerCase(), channel);
     // Channel: if deliveryContext has a channel, it must match.
     // If deliveryContext.channel is missing, fallback to origin.provider.
     if (dcChannel) {
@@ -83,19 +85,23 @@ function deliveryContextMatches(session, channel, accountId, to) {
     // To: match deliveryContext.to, fallback to origin.to.
     if (dcTo) {
         if (dcTo !== normalizedTo) {
-            const originTo = (session.origin?.to ?? '').trim().toLowerCase();
             if (originTo !== normalizedTo)
                 return false;
         }
     }
     else {
-        const originTo = (session.origin?.to ?? '').trim().toLowerCase();
         if (originTo && originTo !== normalizedTo)
             return false;
     }
     if (accountId && dcAccountId && dcAccountId !== accountId)
         return false;
     return true;
+}
+function stripProviderPrefix(value, provider) {
+    const prefix = `${provider}:`;
+    if (value.startsWith(prefix))
+        return value.slice(prefix.length);
+    return value;
 }
 function normalizeChatType(raw) {
     const lower = raw.toLowerCase();
