@@ -96,7 +96,17 @@ export class SessionCommandHandlers {
   async handleWhereami(ctx: PluginCommandContext): Promise<PluginCommandResult> {
     const result = await deriveScopes(ctx, this.gateway);
     if (!isSuccess(result)) {
-      return { text: formatError(result.reason) };
+      const lines = [
+        '当前会话信息（诊断模式）',
+        '',
+        `频道：${ctx.channel ?? '(空)'}`,
+        `发送者：${ctx.senderId ?? '(空)'}`,
+        `目标：${ctx.to ?? '(空)'}`,
+        `账号：${ctx.accountId ?? '(空)'}`,
+      ];
+      lines.push(`\n无法推导范围：${result.reason === 'actor' ? '缺少用户身份' : '缺少聊天范围'}`);
+      lines.push('提示：先正常发送几条消息后再试。');
+      return { text: lines.join('\n') };
     }
     const { actor, route } = result;
     const lines = [

@@ -54,7 +54,7 @@ export async function deriveScopes(
   if (!actor) return { reason: 'actor' };
 
   // 2. Reverse-lookup route metadata via sessions.list
-  const listResult = await gateway.sessionsList({ agentId, limit: 100 });
+  const listResult = await gateway.sessionsList({ agentId, limit: 500 });
   const sessions: GatewaySession[] = listResult.sessions ?? [];
 
   const match = sessions.find((s) =>
@@ -105,11 +105,30 @@ function deliveryContextMatches(
 ): boolean {
   const dc = session.deliveryContext ?? {};
   const dcChannel = (dc.channel ?? '').trim().toLowerCase();
-  const dcTo = (dc.to ?? '').trim();
+  const dcTo = (dc.to ?? '').trim().toLowerCase();
   const dcAccountId = (dc.accountId ?? '').trim() || undefined;
+  const normalizedTo = to.trim().toLowerCase();
 
-  if (dcChannel !== channel) return false;
-  if (dcTo !== to) return false;
+  // Channel: if deliveryContext has a channel, it must match.
+  // If deliveryContext.channel is missing, fallback to origin.provider.
+  if (dcChannel) {
+    if (dcChannel !== channel) return false;
+  } else {
+    const originProvider = (session.origin?.provider ?? '').trim().toLowerCase();
+    if (originProvider && originProvider !== channel) return false;
+  }
+
+  // To: match deliveryContext.to, fallback to origin.to.
+  if (dcTo) {
+    if (dcTo !== normalizedTo) {
+      const originTo = (session.origin?.to ?? '').trim().toLowerCase();
+      if (originTo !== normalizedTo) return false;
+    }
+  } else {
+    const originTo = (session.origin?.to ?? '').trim().toLowerCase();
+    if (originTo && originTo !== normalizedTo) return false;
+  }
+
   if (accountId && dcAccountId && dcAccountId !== accountId) return false;
 
   return true;
@@ -123,9 +142,13 @@ function normalizeChatType(raw: string): RouteScope['chatType'] {
   return 'unknown';
 }
 
-function extractSessionKey(agentPrefixed: string): string {
-  const idx = agentPrefixed.lastIndexOf(':');
-  if (idx === -1) return agentPrefixed.toLowerCase();
-  return agentPrefixed.slice(idx + 1).toLowerCase();
+function extractSessionKey(agentPrefixed: string): string | null {
+  if (agentPrefixed.startsWith('agent:')) {
+    const parts = agentPrefixed.split(':');
+    if (parts.length >= 3) {
+      return parts.slice(2).join(':').toLowerCase();
+    }
+  }
+  return (agentPrefixed || '').toLowerCase() || null;
 }
 
