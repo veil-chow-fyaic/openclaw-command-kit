@@ -43,10 +43,10 @@ export class SessionCommandHandlers {
     const current = items.find((i) => i.isCurrent);
 
     if (items.length === 0 && query) {
-      return { text: `没有找到匹配 "${query}" 的历史对话。\n\n发送 /sessions 查看全部对话。` };
+      return { text: `【OCK】没有找到匹配 "${query}" 的历史对话。\n\n发送 /sessions 查看全部对话。` };
     }
 
-    let text = formatSessionList(items, current);
+    let text = '【OCK】' + formatSessionList(items, current);
     if (items.length > 0) {
       text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
     } else {
@@ -63,7 +63,7 @@ export class SessionCommandHandlers {
 
     const items = await this.history.listSessions(result.actor, result.route);
     const current = items.find((i) => i.isCurrent);
-    let text = formatSessionList(items, current);
+    let text = '【OCK】' + formatSessionList(items, current);
     if (items.length > 0) {
       text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
     }
@@ -90,14 +90,14 @@ export class SessionCommandHandlers {
     }
 
     const err = restoreResult.error ?? 'readback_failure';
-    return { text: formatError(err, { index }) };
+    return { text: '【OCK】' + formatError(err, { index }) };
   }
 
   async handleWhereami(ctx: PluginCommandContext): Promise<PluginCommandResult> {
     const result = await deriveScopes(ctx, this.gateway);
     if (!isSuccess(result)) {
       const lines = [
-        '当前会话信息（诊断模式）',
+        '【OCK】当前会话信息（诊断模式）',
         '',
         `频道：${ctx.channel ?? '(空)'}`,
         `发送者：${ctx.senderId ?? '(空)'}`,
@@ -110,7 +110,7 @@ export class SessionCommandHandlers {
     }
     const { actor, route } = result;
     const lines = [
-      '当前会话信息',
+      '【OCK】当前会话信息',
       '',
       `频道：${route.provider}`,
       `会话：${route.sessionKey}`,
