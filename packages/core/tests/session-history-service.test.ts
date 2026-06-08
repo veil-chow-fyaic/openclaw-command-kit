@@ -223,6 +223,39 @@ describe('SessionHistoryService', () => {
     expect(groupItems).toHaveLength(0);
   });
 
+  it('prefers local store entries over gateway duplicates for manual sessions', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        {
+          key: 'agent:main:manual-session',
+          sessionId: 'manual-session',
+          origin: { provider: 'webchat' },
+          updatedAt: 6000,
+        },
+      ],
+    });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:manual-session': {
+          sessionId: 'manual-session',
+          sessionFile: 'manual-session.jsonl',
+          updatedAt: 6000,
+        },
+      }),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].sessionId).toBe('manual-session');
+    expect(items[0].sessionFile).toBe('manual-session.jsonl');
+  });
+
   it('sorts by updatedAt desc', async () => {
     const gateway = new GatewayClient() as any;
     gateway.sessionsList.mockResolvedValue({

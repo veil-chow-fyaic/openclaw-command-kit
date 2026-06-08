@@ -239,18 +239,24 @@ export class SessionHistoryService {
 }
 
 function mergeRawSessions(primary: RawSession[], secondary: RawSession[]): RawSession[] {
-  const merged: RawSession[] = [];
-  const seen = new Set<string>();
+  const bySessionId = new Map<string, RawSession>();
 
-  for (const raw of [...primary, ...secondary]) {
+  for (const raw of primary) {
     const id = raw.sessionId;
     if (!id) continue;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    merged.push(raw);
+    bySessionId.set(id, raw);
   }
 
-  return merged;
+  for (const raw of secondary) {
+    const id = raw.sessionId;
+    if (!id) continue;
+    // Prefer the local sessions.json entry. Gateway list output may normalize or
+    // omit the route key for manually created sessions, while the store has the
+    // canonical key/file needed for restore.
+    bySessionId.set(id, raw);
+  }
+
+  return Array.from(bySessionId.values());
 }
 
 function sessionMatchesRoute(raw: RawSession, route: RouteScope, sessionKey: string): boolean {
