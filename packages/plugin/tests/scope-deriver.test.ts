@@ -67,6 +67,53 @@ describe('deriveScopes', () => {
     expect(result.route.organization).toBe('org1');
   });
 
+  it('uses newest matching delivery route when multiple sessionKey variants exist', async () => {
+    const gateway = mockGateway([
+      {
+        key: 'agent:main:wecom-default-弗忧联盟-veil（周威）',
+        sessionId: 'older',
+        deliveryContext: {
+          channel: 'wecom',
+          to: 'Veil（周威）',
+          accountId: 'default',
+        },
+        origin: {
+          provider: 'wecom',
+          chatType: 'direct',
+          accountId: 'default',
+          organization: '弗忧联盟',
+          to: 'Veil（周威）',
+        },
+        updatedAt: 1000,
+      },
+      {
+        key: 'agent:main:wecom-default-veil（周威）',
+        sessionId: 'newer',
+        deliveryContext: {
+          channel: 'wecom',
+          to: 'Veil（周威）',
+          accountId: 'default',
+        },
+        origin: {
+          provider: 'wecom',
+          chatType: 'direct',
+          accountId: 'default',
+          to: 'Veil（周威）',
+        },
+        updatedAt: 3000,
+      },
+    ]);
+
+    const result = await deriveScopes(
+      { channel: 'wecom', senderId: 'userA', to: 'Veil（周威）', accountId: 'default' },
+      gateway
+    );
+
+    expectSuccess(result);
+    expect(result.route.sessionKey).toBe('wecom-default-veil（周威）');
+    expect(result.route.organization).toBeUndefined();
+  });
+
   it('derives group chat type correctly', async () => {
     const gateway = mockGateway([
       {

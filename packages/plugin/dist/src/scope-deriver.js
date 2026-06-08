@@ -30,7 +30,9 @@ export async function deriveScopes(ctx, gateway, agentId = 'main') {
     // 2. Reverse-lookup route metadata via sessions.list
     const listResult = await gateway.sessionsList({ agentId, limit: 500 });
     const sessions = listResult.sessions ?? [];
-    const match = sessions.find((s) => deliveryContextMatches(s, channel, accountId, to));
+    const match = sessions
+        .filter((s) => deliveryContextMatches(s, channel, accountId, to))
+        .sort((a, b) => sessionUpdatedAtMs(b) - sessionUpdatedAtMs(a))[0];
     if (!match) {
         // No existing session for this route — we cannot derive organization or chatType.
         // Fail closed: without a scoped session we have nothing to list or resume.
@@ -121,5 +123,15 @@ function extractSessionKey(agentPrefixed) {
         }
     }
     return (agentPrefixed || '').toLowerCase() || null;
+}
+function sessionUpdatedAtMs(session) {
+    const value = session.updatedAt;
+    if (typeof value === 'number')
+        return value;
+    if (typeof value === 'string') {
+        const parsed = Date.parse(value);
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
 }
 //# sourceMappingURL=scope-deriver.js.map

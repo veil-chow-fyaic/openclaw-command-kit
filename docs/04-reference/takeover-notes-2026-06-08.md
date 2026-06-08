@@ -49,3 +49,19 @@
 
 - The currently published `@fyaic/openclaw-command-kit@0.1.9` remains affected until `0.1.10` is published.
 - Publishing is an external write; do not run `npm publish` without explicit user confirmation.
+
+## Follow-up Finding: Single Session In `/sessions`
+
+- After `0.1.10`, runtime slash registration works, but `/sessions` can still show only one entry.
+- Remote MacBook-Neo data showed the same WeCom route can exist under multiple sessionKey variants, for example:
+  - `agent:main:wecom-default-弗忧联盟-veil（周威）`
+  - `agent:main:wecom-default-veil（周威）`
+  - `wecom-default-veil（周威）`
+- Root cause:
+  - `deriveScopes` picked the first matching delivery route, which could be an older sessionKey variant.
+  - `SessionHistoryService` then required exact `sessionKey === route.sessionKey`, excluding other entries for the same delivery route.
+- Fix prepared:
+  - `deriveScopes` now chooses the newest matching delivery route by `updatedAt`.
+  - `SessionHistoryService` now treats matching `deliveryContext.to` / `origin.to` / `origin.label` as the same route, while preserving provider/account/organization/chatType checks.
+  - `@fyaic/core` must be published as `0.1.5`.
+  - `@fyaic/openclaw-command-kit` must be published as `0.1.11` with dependency `@fyaic/core ^0.1.5`.

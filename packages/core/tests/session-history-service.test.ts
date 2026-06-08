@@ -63,6 +63,61 @@ describe('SessionHistoryService', () => {
     expect(items[0].isCurrent).toBe(true);
   });
 
+  it('includes same delivery route across sessionKey variants', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        {
+          key: 'agent:main:wecom-default-弗忧联盟-veil（周威）',
+          sessionId: 'with-org',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: 'Veil（周威）', to: 'Veil（周威）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Veil（周威）' },
+          updatedAt: 1000,
+        },
+        {
+          key: 'agent:main:wecom-default-veil（周威）',
+          sessionId: 'without-org',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', label: 'Veil（周威）', to: 'Veil（周威）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Veil（周威）' },
+          updatedAt: 3000,
+        },
+        {
+          key: 'wecom-default-veil（周威）',
+          sessionId: 'raw-key',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', label: 'Veil（周威）', to: 'wecom:Veil（周威）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'wecom:Veil（周威）' },
+          updatedAt: 2000,
+        },
+        {
+          key: 'agent:main:wecom-default-rosetta(郭子滇)',
+          sessionId: 'other-person',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', label: 'Rosetta(郭子滇)', to: 'Rosetta(郭子滇)' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Rosetta(郭子滇)' },
+          updatedAt: 4000,
+        },
+      ],
+    });
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const veilRoute: RouteScope = {
+      ...route,
+      sessionKey: 'wecom-default-弗忧联盟-veil（周威）',
+      label: 'Veil（周威）',
+    };
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, veilRoute);
+
+    expect(items.map((item) => item.sessionId)).toEqual([
+      'without-org',
+      'raw-key',
+      'with-org',
+    ]);
+  });
+
   it('sorts by updatedAt desc', async () => {
     const gateway = new GatewayClient() as any;
     gateway.sessionsList.mockResolvedValue({

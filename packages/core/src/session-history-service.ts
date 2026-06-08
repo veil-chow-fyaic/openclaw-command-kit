@@ -11,10 +11,19 @@ interface RawSession {
   chatType?: string;
   origin?: {
     provider?: string;
+    surface?: string;
     accountId?: string;
     organization?: string;
     label?: string;
     chatType?: string;
+    from?: string;
+    to?: string;
+  };
+  deliveryContext?: {
+    channel?: string;
+    to?: string;
+    accountId?: string;
+    organization?: string;
   };
   updatedAt?: number;
   sessionId?: string;
@@ -176,8 +185,7 @@ export class SessionHistoryService {
       if (rawChatType !== route.chatType) return null;
     }
 
-    // Session key matching: must match route.sessionKey (case-insensitive)
-    if (sessionKey.toLowerCase() !== route.sessionKey.toLowerCase()) return null;
+    if (!sessionMatchesRoute(raw, route, sessionKey)) return null;
 
     const updatedAt = raw.updatedAt ? new Date(raw.updatedAt) : new Date();
     const title = raw.title || raw.displayName || origin.label || '未命名对话';
@@ -192,6 +200,42 @@ export class SessionHistoryService {
       isRestorable: true,
     };
   }
+}
+
+function sessionMatchesRoute(raw: RawSession, route: RouteScope, sessionKey: string): boolean {
+  if (sessionKey.toLowerCase() === route.sessionKey.toLowerCase()) return true;
+
+  const routeTarget = normalizeRouteTarget(route.label, route.provider);
+  if (!routeTarget) return false;
+
+  const origin = raw.origin ?? {};
+  const dc = raw.deliveryContext ?? {};
+  const candidates = [
+    dc.to,
+    origin.to,
+    origin.label,
+  ];
+
+  return candidates.some((value) => normalizeRouteTarget(value, route.provider) === routeTarget);
+}
+
+function normalizeRouteTarget(value: string | undefined, provider: string): string {
+  let normalized = (value ?? '').trim().toLowerCase();
+  if (!normalized) return '';
+
+  const prefixes = [
+    `${provider.toLowerCase()}:`,
+    'user:',
+    'chat:',
+    'channel:',
+  ];
+  for (const prefix of prefixes) {
+    if (normalized.startsWith(prefix)) {
+      normalized = normalized.slice(prefix.length);
+    }
+  }
+
+  return normalized.replace(/\s+/g, '');
 }
 
 function extractSessionKey(rawKey: string): string | null {

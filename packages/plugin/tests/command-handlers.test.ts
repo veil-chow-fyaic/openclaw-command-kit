@@ -83,6 +83,7 @@ describe('SessionCommandHandlers', () => {
       expect(deriveScopes).toHaveBeenCalledWith(mockCtx(), expect.anything());
       expect(mockHistory.listSessions).toHaveBeenCalled();
       expect(result.text).toContain('可恢复的历史对话');
+      expect(result.text).not.toContain('【OCK】');
     });
 
     it('returns fail-closed message when actor scope cannot be derived', async () => {
@@ -104,6 +105,7 @@ describe('SessionCommandHandlers', () => {
 
       expect(result.text).toContain('可恢复的历史对话');
       expect(result.text).toContain('发送 /resume N 切换到第 N 个历史对话。');
+      expect(result.text).not.toContain('【OCK】');
     });
 
     it('returns fail-closed message when route scope cannot be derived', async () => {
@@ -166,7 +168,7 @@ describe('SessionCommandHandlers', () => {
 
       const result = await handlers.handleResumeByIndex(mockCtx(), 999);
 
-      expect(result.text).toBe('【OCK】' + formatError('invalid_index', { index: 999 }));
+      expect(result.text).toBe(formatError('invalid_index', { index: 999 }));
     });
 
     it('returns fail-closed message when route scope cannot be derived', async () => {
@@ -187,7 +189,7 @@ describe('SessionCommandHandlers', () => {
 
       const result = await handlers.handleResumeByIndex(mockCtx(), 1);
 
-      expect(result.text).toBe('【OCK】' + formatError('readback_failure', { index: 1 }));
+      expect(result.text).toBe(formatError('readback_failure', { index: 1 }));
     });
   });
 });
