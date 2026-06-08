@@ -1,5 +1,8 @@
-// List scoped sessions via Gateway RPC + local transcript scan for historical generations.
+// List scoped sessions via Gateway RPC + local session store + local transcript scan.
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { homedir } from 'node:os';
 import type { GatewayClient } from './gateway-client.js';
 import type { ActorScope, RouteScope, ResumeListItem } from './types.js';
 import { scanGenerations } from './session-generation-scanner.js';
@@ -29,10 +32,14 @@ interface RawSession {
   sessionId?: string;
   displayName?: string;
   title?: string;
+  sessionFile?: string;
 }
 
 export class SessionHistoryService {
-  constructor(private gateway: GatewayClient) {}
+  constructor(
+    private gateway: GatewayClient,
+    private sessionsDir: string = process.env.OPENCLAW_SESSIONS_DIR || path.join(homedir(), '.openclaw/agents/main/sessions')
+  ) {}
 
   async listSessions(
     actor: ActorScope,
@@ -49,19 +56,18 @@ export class SessionHistoryService {
       limit: 500,
     });
 
-    const rawSessions: RawSession[] = (result as any).sessions ?? [];
+    const rawSessions = mergeRawSessions(
+      (result as any).sessions ?? [],
+      this._readLocalSessionStore()
+    );
 
     const activeItems = rawSessions
       .map((s) => this._toItem(s, route))
       .filter((item): item is ResumeListItem => item !== null);
 
-    // Mark active items as current
-    activeItems.forEach((item) => {
-      item.isCurrent = true;
-    });
-
     // Enrich active session preview from chat.history
-    if (activeItems.length > 0) {
+    const currentRouteItems = activeItems.filter((item) => item.isCurrent);
+    if (currentRouteItems.length > 0) {
       let enriched = false;
       const tryEnrich = async (sessionKey: string) => {
         const chat = await this.gateway.chatHistory({ sessionKey, limit: 3 });
@@ -81,7 +87,7 @@ export class SessionHistoryService {
         const lastUser = textMsgs.slice().reverse().find((m) => m.role === 'user')?.text || '';
         const lastAssistant = textMsgs.slice().reverse().find((m) => m.role === 'assistant')?.text || '';
         const preview = lastAssistant || lastUser || '';
-        for (const item of activeItems) {
+        for (const item of currentRouteItems) {
           item.lastMessagePreview = preview;
           item.lastUserMessage = lastUser || undefined;
           item.lastAssistantMessage = lastAssistant || undefined;
@@ -93,7 +99,7 @@ export class SessionHistoryService {
         await tryEnrich(route.sessionKey);
       } catch (err) {
         // Fallback: try with the active sessionId as key
-        const fallbackKey = activeItems[0]?.sessionId;
+        const fallbackKey = currentRouteItems[0]?.sessionId;
         if (fallbackKey && fallbackKey !== route.sessionKey) {
           try {
             await tryEnrich(fallbackKey);
@@ -110,12 +116,13 @@ export class SessionHistoryService {
     const historicalItems: ResumeListItem[] = [];
     if (route.label && activeItems.length > 0) {
       const seenSessionIds = new Set(activeItems.map((i) => i.sessionId));
-      const activeTitle = activeItems[0]?.title || route.label;
+      const activeRouteItem = activeItems.find((item) => item.isCurrent) ?? activeItems[0];
+      const activeTitle = activeRouteItem?.title || route.label;
       try {
         const generations = await scanGenerations({
           agentId: 'main',
           route,
-          currentSessionId: activeItems[0].sessionId,
+          currentSessionId: activeRouteItem.sessionId,
           currentSessionKey: route.sessionKey,
           activeTitle,
         });
@@ -185,10 +192,13 @@ export class SessionHistoryService {
       if (rawChatType !== route.chatType) return null;
     }
 
-    if (!sessionMatchesRoute(raw, route, sessionKey)) return null;
+    const exactRouteMatch = sessionKey.toLowerCase() === route.sessionKey.toLowerCase();
+    const sameDeliveryRoute = sessionMatchesRoute(raw, route, sessionKey);
+    const unscopedManual = !sameDeliveryRoute && sessionIsUnscopedManual(raw, route, sessionKey);
+    if (!sameDeliveryRoute && !unscopedManual) return null;
 
     const updatedAt = raw.updatedAt ? new Date(raw.updatedAt) : new Date();
-    const title = raw.title || raw.displayName || origin.label || '未命名对话';
+    const title = raw.title || raw.displayName || origin.label || titleFromSessionKey(sessionKey);
 
     return {
       displayIndex: 0, // assigned later
@@ -196,10 +206,51 @@ export class SessionHistoryService {
       title,
       updatedAt,
       lastMessagePreview: '', // TODO: enrich from chat.history in Phase 2+
-      isCurrent: false, // TODO: detect current session
+      isCurrent: exactRouteMatch,
       isRestorable: true,
+      sessionFile: raw.sessionFile ? path.basename(raw.sessionFile) : undefined,
     };
   }
+
+  private _readLocalSessionStore(): RawSession[] {
+    const storePath = path.join(this.sessionsDir, 'sessions.json');
+    if (!fs.existsSync(storePath)) return [];
+
+    let store: unknown;
+    try {
+      store = JSON.parse(fs.readFileSync(storePath, 'utf-8'));
+    } catch {
+      return [];
+    }
+
+    if (!store || typeof store !== 'object' || Array.isArray(store)) return [];
+
+    const sessions: RawSession[] = [];
+    for (const [key, value] of Object.entries(store as Record<string, unknown>)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+      sessions.push({
+        ...(value as RawSession),
+        key,
+      });
+    }
+
+    return sessions;
+  }
+}
+
+function mergeRawSessions(primary: RawSession[], secondary: RawSession[]): RawSession[] {
+  const merged: RawSession[] = [];
+  const seen = new Set<string>();
+
+  for (const raw of [...primary, ...secondary]) {
+    const id = raw.sessionId;
+    if (!id) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    merged.push(raw);
+  }
+
+  return merged;
 }
 
 function sessionMatchesRoute(raw: RawSession, route: RouteScope, sessionKey: string): boolean {
@@ -217,6 +268,28 @@ function sessionMatchesRoute(raw: RawSession, route: RouteScope, sessionKey: str
   ];
 
   return candidates.some((value) => normalizeRouteTarget(value, route.provider) === routeTarget);
+}
+
+function sessionIsUnscopedManual(raw: RawSession, route: RouteScope, sessionKey: string): boolean {
+  if (route.chatType !== 'direct') return false;
+
+  const origin = raw.origin ?? {};
+  const dc = raw.deliveryContext ?? {};
+  if (origin.provider || origin.surface || dc.channel) return false;
+  if (origin.to || dc.to || origin.label) return false;
+  if (origin.chatType || raw.chatType || raw.kind) return false;
+
+  const key = sessionKey.toLowerCase();
+  if (!key || key === 'main' || key.startsWith('dashboard:')) return false;
+
+  return true;
+}
+
+function titleFromSessionKey(sessionKey: string): string {
+  const key = sessionKey.trim();
+  if (!key) return '未命名对话';
+  const parts = key.split(':');
+  return parts[parts.length - 1] || key;
 }
 
 function normalizeRouteTarget(value: string | undefined, provider: string): string {

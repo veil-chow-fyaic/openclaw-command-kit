@@ -1,6 +1,6 @@
 {
   "name": "@fyaic/core",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Core library for OpenClaw session commands: session history, resume, and restore services.",
   "type": "module",
   "main": "./dist/src/index.js",

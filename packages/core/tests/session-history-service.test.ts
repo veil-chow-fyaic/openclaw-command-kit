@@ -1,4 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SessionHistoryService } from '../src/session-history-service.js';
 import { GatewayClient } from '../src/gateway-client.js';
 import type { ActorScope, RouteScope } from '../src/types.js';
@@ -6,6 +9,7 @@ import type { ActorScope, RouteScope } from '../src/types.js';
 vi.mock('../src/gateway-client.js', () => ({
   GatewayClient: vi.fn().mockImplementation(() => ({
     sessionsList: vi.fn(),
+    chatHistory: vi.fn().mockResolvedValue({ messages: [] }),
   })),
 }));
 
@@ -14,6 +18,8 @@ vi.mock('../src/session-generation-scanner.js', () => ({
 }));
 
 import { scanGenerations } from '../src/session-generation-scanner.js';
+
+let testSessionsDir: string;
 
 const actor: ActorScope = {
   provider: 'wecom',
@@ -34,6 +40,13 @@ const route: RouteScope = {
 describe('SessionHistoryService', () => {
   beforeEach(() => {
     vi.mocked(scanGenerations).mockReset();
+    testSessionsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ock-sessions-'));
+    process.env.OPENCLAW_SESSIONS_DIR = testSessionsDir;
+  });
+
+  afterEach(() => {
+    delete process.env.OPENCLAW_SESSIONS_DIR;
+    fs.rmSync(testSessionsDir, { recursive: true, force: true });
   });
 
   it('returns empty list when gateway returns no sessions', async () => {
@@ -116,6 +129,98 @@ describe('SessionHistoryService', () => {
       'raw-key',
       'with-org',
     ]);
+  });
+
+  it('supplements gateway sessions from local sessions.json when gateway omits raw store entries', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        {
+          key: 'agent:main:wecom-default-veil（周威）',
+          sessionId: 'gateway-current',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', label: 'Veil（周威）', to: 'Veil（周威）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Veil（周威）' },
+          updatedAt: 3000,
+        },
+        {
+          key: 'agent:main:wecom-default-弗忧联盟-veil（周威）',
+          sessionId: 'gateway-org',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: 'Veil（周威）', to: 'Veil（周威）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Veil（周威）' },
+          updatedAt: 1000,
+        },
+      ],
+    });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:wecom-default-veil（周威）': {
+          sessionId: 'gateway-current',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', label: 'Veil（周威）', to: 'Veil（周威）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Veil（周威）' },
+          updatedAt: 3000,
+        },
+        'wecom-default-veil（周威）': {
+          sessionId: 'local-raw-key',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', label: 'Veil（周威）', to: 'Veil（周威）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Veil（周威）' },
+          sessionFile: 'local-raw-key.jsonl',
+          updatedAt: 4000,
+        },
+      }),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const veilRoute: RouteScope = {
+      ...route,
+      sessionKey: 'wecom-default-veil（周威）',
+      label: 'Veil（周威）',
+    };
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, veilRoute);
+
+    expect(items.map((item) => item.sessionId)).toEqual([
+      'local-raw-key',
+      'gateway-current',
+      'gateway-org',
+    ]);
+    expect(items[0].sessionFile).toBe('local-raw-key.jsonl');
+  });
+
+  it('includes unscoped manual sessions only in direct chats', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({ sessions: [] });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:explicit:meeting-follow-up': {
+          sessionId: 'manual-session',
+          sessionFile: 'manual-session.jsonl',
+          updatedAt: 6000,
+        },
+        'agent:main:main': {
+          sessionId: 'default-main',
+          sessionFile: 'default-main.jsonl',
+          updatedAt: 7000,
+        },
+      }),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const directItems = await service.listSessions(actor, route);
+    expect(directItems.map((item) => item.sessionId)).toEqual(['manual-session']);
+    expect(directItems[0].title).toBe('meeting-follow-up');
+    expect(directItems[0].isCurrent).toBe(false);
+
+    const groupItems = await service.listSessions(actor, { ...route, chatType: 'group' });
+    expect(groupItems).toHaveLength(0);
   });
 
   it('sorts by updatedAt desc', async () => {

@@ -1,3 +1,5 @@
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
 import { SessionHistoryService } from '../src/session-history-service.js';
 import { GatewayClient } from '../src/gateway-client.js';
@@ -8,8 +10,15 @@ import type { ActorScope, RouteScope } from '../src/types.js';
 vi.mock('../src/gateway-client.js', () => ({
   GatewayClient: vi.fn().mockImplementation(() => ({
     sessionsList: vi.fn(),
+    chatHistory: vi.fn().mockResolvedValue({ messages: [] }),
   })),
 }));
+
+const emptySessionsDir = path.join(os.tmpdir(), `ock-empty-sessions-${process.pid}`);
+
+function createService(gateway: GatewayClient): SessionHistoryService {
+  return new SessionHistoryService(gateway, emptySessionsDir);
+}
 
 const actorA: ActorScope = {
   provider: 'wecom',
@@ -92,7 +101,7 @@ describe('Route isolation', () => {
       ],
     });
 
-    const service = new SessionHistoryService(gateway);
+    const service = createService(gateway);
     const directItems = await service.listSessions(actorA, routeDirect);
     const groupItems = await service.listSessions(actorA, routeGroup);
 
@@ -116,7 +125,7 @@ describe('Route isolation', () => {
       ],
     });
 
-    const service = new SessionHistoryService(gateway);
+    const service = createService(gateway);
     const differentRoute: RouteScope = {
       ...routeDirect,
       sessionKey: 'wecom-acc1-org1-Bob',
@@ -139,7 +148,7 @@ describe('Route isolation', () => {
       ],
     });
 
-    const service = new SessionHistoryService(gateway);
+    const service = createService(gateway);
     const differentRoute: RouteScope = {
       ...routeDirect,
       organization: 'org2',
@@ -162,7 +171,7 @@ describe('Route isolation', () => {
       ],
     });
 
-    const service = new SessionHistoryService(gateway);
+    const service = createService(gateway);
     const mismatchedActor = { ...actorA, accountId: 'acc2' };
     const items = await service.listSessions(mismatchedActor, routeDirect);
     expect(items).toHaveLength(0);
@@ -182,7 +191,7 @@ describe('Route isolation', () => {
       ],
     });
 
-    const service = new SessionHistoryService(gateway);
+    const service = createService(gateway);
     const mismatchedActor = { ...actorA, organization: 'org2' };
     const items = await service.listSessions(mismatchedActor, routeDirect);
     expect(items).toHaveLength(0);
@@ -202,7 +211,7 @@ describe('Route isolation', () => {
       ],
     });
 
-    const service = new SessionHistoryService(gateway);
+    const service = createService(gateway);
     const emptyActor = { provider: 'wecom', senderId: '' };
     const items = await service.listSessions(emptyActor as any, routeDirect);
     expect(items).toHaveLength(0);
