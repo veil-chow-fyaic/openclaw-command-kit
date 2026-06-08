@@ -85,12 +85,12 @@ describe('SessionCommandHandlers', () => {
       expect(result.text).toContain('可恢复的历史对话');
     });
 
-    it('returns fail-closed message when scopes are null', async () => {
-      vi.mocked(deriveScopes).mockResolvedValue(null);
+    it('returns fail-closed message when actor scope cannot be derived', async () => {
+      vi.mocked(deriveScopes).mockResolvedValue({ reason: 'actor' });
 
       const result = await handlers.handleSessions(mockCtx());
 
-      expect(result.text).toBe('无法确认当前聊天范围，请稍后再试。');
+      expect(result.text).toBe(formatError('actor'));
       expect(mockHistory.listSessions).not.toHaveBeenCalled();
     });
   });
@@ -106,12 +106,12 @@ describe('SessionCommandHandlers', () => {
       expect(result.text).toContain('发送 /resume N 切换到第 N 个历史对话。');
     });
 
-    it('returns fail-closed message when scopes are null', async () => {
-      vi.mocked(deriveScopes).mockResolvedValue(null);
+    it('returns fail-closed message when route scope cannot be derived', async () => {
+      vi.mocked(deriveScopes).mockResolvedValue({ reason: 'route' });
 
       const result = await handlers.handleResume(mockCtx());
 
-      expect(result.text).toBe('无法确认当前聊天范围，请稍后再试。');
+      expect(result.text).toBe(formatError('route'));
     });
   });
 
@@ -166,15 +166,15 @@ describe('SessionCommandHandlers', () => {
 
       const result = await handlers.handleResumeByIndex(mockCtx(), 999);
 
-      expect(result.text).toBe(formatError('invalid_index'));
+      expect(result.text).toBe('【OCK】' + formatError('invalid_index', { index: 999 }));
     });
 
-    it('returns fail-closed message when scopes are null', async () => {
-      vi.mocked(deriveScopes).mockResolvedValue(null);
+    it('returns fail-closed message when route scope cannot be derived', async () => {
+      vi.mocked(deriveScopes).mockResolvedValue({ reason: 'route' });
 
       const result = await handlers.handleResumeByIndex(mockCtx(), 1);
 
-      expect(result.text).toBe('无法确认当前聊天范围，请稍后再试。');
+      expect(result.text).toBe(formatError('route'));
       expect(mockRestore.restoreSession).not.toHaveBeenCalled();
     });
 
@@ -187,7 +187,7 @@ describe('SessionCommandHandlers', () => {
 
       const result = await handlers.handleResumeByIndex(mockCtx(), 1);
 
-      expect(result.text).toBe(formatError('readback_failure'));
+      expect(result.text).toBe('【OCK】' + formatError('readback_failure', { index: 1 }));
     });
   });
 });

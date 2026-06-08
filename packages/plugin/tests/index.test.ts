@@ -12,6 +12,7 @@ vi.mock('../src/command-handlers.js', () => ({
     handleSessions: vi.fn().mockResolvedValue({ text: 'sessions list' }),
     handleResume: vi.fn().mockResolvedValue({ text: 'resume list' }),
     handleResumeByIndex: vi.fn().mockResolvedValue({ text: 'resumed' }),
+    handleWhereami: vi.fn().mockResolvedValue({ text: 'whereami' }),
   })),
 }));
 
@@ -29,14 +30,21 @@ describe('plugin definition', () => {
     expect(plugin.register).toBeTypeOf('function');
   });
 
-  it('registers sessions and resume commands', () => {
+  it('registers sessions, whereami, and resume commands', () => {
     const api = createMockApi();
     plugin.register(api as any);
 
-    expect(api.registerCommand).toHaveBeenCalledTimes(2);
+    expect(api.registerCommand).toHaveBeenCalledTimes(3);
     expect(api.registerCommand).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'sessions',
+        acceptsArgs: true,
+        requireAuth: true,
+      })
+    );
+    expect(api.registerCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'whereami',
         acceptsArgs: false,
         requireAuth: true,
       })
@@ -64,6 +72,22 @@ describe('plugin definition', () => {
 
     expect(SessionCommandHandlers).toHaveBeenCalled();
     expect(result.text).toBe('sessions list');
+  });
+
+  it('whereami handler delegates to SessionCommandHandlers.handleWhereami', async () => {
+    const api = createMockApi();
+    plugin.register(api as any);
+
+    const whereamiCall = api.registerCommand.mock.calls.find(
+      (c: any) => c[0].name === 'whereami'
+    );
+    expect(whereamiCall).toBeDefined();
+
+    const handler = whereamiCall![0].handler;
+    const result = await handler({} as any);
+
+    expect(SessionCommandHandlers).toHaveBeenCalled();
+    expect(result.text).toBe('whereami');
   });
 
   it('resume handler with no args delegates to handleResume', async () => {

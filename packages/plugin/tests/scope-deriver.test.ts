@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { deriveScopes } from '../src/scope-deriver.js';
 import { GatewayClient } from '@fyaic/core';
+import type { ActorScope, RouteScope } from '@fyaic/core';
 
 function mockGateway(sessions: any[]) {
   return {
@@ -8,23 +9,30 @@ function mockGateway(sessions: any[]) {
   } as unknown as GatewayClient;
 }
 
+function expectSuccess(result: Awaited<ReturnType<typeof deriveScopes>>): asserts result is {
+  actor: ActorScope;
+  route: RouteScope;
+} {
+  expect('actor' in result).toBe(true);
+}
+
 describe('deriveScopes', () => {
-  it('returns null when senderId is missing', async () => {
+  it('returns actor failure when senderId is missing', async () => {
     const gateway = mockGateway([]);
     const result = await deriveScopes(
       { channel: 'wecom', to: 'Alice', senderId: '' },
       gateway
     );
-    expect(result).toBeNull();
+    expect(result).toEqual({ reason: 'actor' });
   });
 
-  it('returns null when to is missing', async () => {
+  it('returns route failure when to is missing', async () => {
     const gateway = mockGateway([]);
     const result = await deriveScopes(
       { channel: 'wecom', senderId: 'userA' },
       gateway
     );
-    expect(result).toBeNull();
+    expect(result).toEqual({ reason: 'route' });
   });
 
   it('derives WeCom scopes from matching session', async () => {
@@ -51,12 +59,12 @@ describe('deriveScopes', () => {
       gateway
     );
 
-    expect(result).not.toBeNull();
-    expect(result!.actor.provider).toBe('wecom');
-    expect(result!.actor.senderId).toBe('userA');
-    expect(result!.route.sessionKey).toBe('wecom-default-org1-alice');
-    expect(result!.route.chatType).toBe('direct');
-    expect(result!.route.organization).toBe('org1');
+    expectSuccess(result);
+    expect(result.actor.provider).toBe('wecom');
+    expect(result.actor.senderId).toBe('userA');
+    expect(result.route.sessionKey).toBe('wecom-default-org1-alice');
+    expect(result.route.chatType).toBe('direct');
+    expect(result.route.organization).toBe('org1');
   });
 
   it('derives group chat type correctly', async () => {
@@ -83,11 +91,11 @@ describe('deriveScopes', () => {
       gateway
     );
 
-    expect(result).not.toBeNull();
-    expect(result!.route.chatType).toBe('group');
+    expectSuccess(result);
+    expect(result.route.chatType).toBe('group');
   });
 
-  it('returns null when no session matches deliveryContext', async () => {
+  it('returns route failure when no session matches deliveryContext', async () => {
     const gateway = mockGateway([
       {
         deliveryContext: { channel: 'wecom', to: 'Bob', accountId: 'default' },
@@ -100,12 +108,13 @@ describe('deriveScopes', () => {
       gateway
     );
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ reason: 'route' });
   });
 
-  it('returns null for unsupported channels', async () => {
+  it('derives scopes for non-WeCom channels when delivery metadata matches', async () => {
     const gateway = mockGateway([
       {
+        key: 'agent:main:telegram-default-12345',
         deliveryContext: { channel: 'telegram', to: 'telegram:12345' },
         origin: { provider: 'telegram', chatType: 'direct' },
       },
@@ -116,7 +125,9 @@ describe('deriveScopes', () => {
       gateway
     );
 
-    expect(result).toBeNull();
+    expectSuccess(result);
+    expect(result.actor.provider).toBe('telegram');
+    expect(result.route.sessionKey).toBe('telegram-default-12345');
   });
 
   it('handles missing accountId gracefully', async () => {
@@ -143,8 +154,8 @@ describe('deriveScopes', () => {
       gateway
     );
 
-    expect(result).not.toBeNull();
-    expect(result!.route.sessionKey).toBe('wecom-default-org1-alice');
+    expectSuccess(result);
+    expect(result.route.sessionKey).toBe('wecom-default-org1-alice');
   });
 
   it('converts messageThreadId to string', async () => {
@@ -171,8 +182,8 @@ describe('deriveScopes', () => {
       gateway
     );
 
-    expect(result).not.toBeNull();
-    expect(result!.route.threadId).toBe('42');
+    expectSuccess(result);
+    expect(result.route.threadId).toBe('42');
   });
 
   it('lower-cases chatLabel in sessionKey to match OpenClaw storage format', async () => {
@@ -201,7 +212,7 @@ describe('deriveScopes', () => {
       gateway
     );
 
-    expect(result).not.toBeNull();
-    expect(result!.route.sessionKey).toBe('wecom-default-org1-veil');
+    expectSuccess(result);
+    expect(result.route.sessionKey).toBe('wecom-default-org1-veil');
   });
 });
