@@ -1,5 +1,5 @@
 // Command handlers for /sessions, /resume, /resume N.
-import { GatewayClient, SessionHistoryService, RestoreService, formatSessionList, formatResumeSuccess, formatError, } from '@fyaic/core';
+import { GatewayClient, SessionHistoryService, RestoreService, formatSessionList, formatResumeSuccess, formatResumeHint, formatResumeHelp, formatResumeUsage, formatSessionsRestoreBoundary, formatError, } from '@fyaic/core';
 import { deriveScopes } from './scope-deriver.js';
 function isSuccess(result) {
     return 'actor' in result && 'route' in result;
@@ -13,19 +13,19 @@ export class SessionCommandHandlers {
         this.history = history ?? new SessionHistoryService(this.gateway);
         this.restore = restore ?? new RestoreService(this.gateway, this.history);
     }
-    async handleSessions(ctx, query) {
+    async handleSessions(ctx, query, options = {}) {
         const result = await deriveScopes(ctx, this.gateway);
         if (!isSuccess(result)) {
             return { text: formatError(result.reason) };
         }
-        const items = await this.history.listSessions(result.actor, result.route, query);
+        const items = await this.history.listSessions(result.actor, result.route, query, options);
         const current = items.find((i) => i.isCurrent);
         if (items.length === 0 && query) {
             return { text: `没有找到匹配 "${query}" 的历史对话。\n\n发送 /sessions 查看全部对话。` };
         }
         let text = formatSessionList(items, current);
         if (items.length > 0) {
-            text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
+            text += `\n\n${formatResumeHint()}`;
         }
         else {
             text += '\n\n提示：多聊几句后，新对话会自动出现在这里。';
@@ -41,9 +41,21 @@ export class SessionCommandHandlers {
         const current = items.find((i) => i.isCurrent);
         let text = formatSessionList(items, current);
         if (items.length > 0) {
-            text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
+            text += `\n\n${formatResumeHint()}`;
         }
         return { text };
+    }
+    async handleResumeList(ctx, query, options = {}) {
+        return this.handleSessions(ctx, query, options);
+    }
+    handleResumeHelp() {
+        return { text: formatResumeHelp() };
+    }
+    handleSessionsNumeric(index) {
+        return { text: formatSessionsRestoreBoundary(index) };
+    }
+    handleResumeUsage() {
+        return { text: formatResumeUsage() };
     }
     async handleResumeByIndex(ctx, index) {
         const result = await deriveScopes(ctx, this.gateway);

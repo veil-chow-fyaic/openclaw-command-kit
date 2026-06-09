@@ -14,7 +14,7 @@ export class RestoreService {
     }
     async restoreSession(actor, route, displayIndex) {
         // 1. Recompute scoped list
-        const items = await this.history.listSessions(actor, route);
+        const items = await this.history.listSessions(actor, route, undefined, { mode: 'all' });
         if (items.length === 0) {
             return {
                 success: false,
@@ -126,7 +126,7 @@ export class RestoreService {
     async _validateBelongsToRoute(actor, item, route) {
         // Secondary safety check: recompute the scoped list with the same actor+route
         // and confirm the selected item is still present.
-        const items = await this.history.listSessions(actor, route);
+        const items = await this.history.listSessions(actor, route, undefined, { mode: 'all' });
         return items.some((i) => i.sessionId === item.sessionId);
     }
     _resolveRouteKeys(route) {

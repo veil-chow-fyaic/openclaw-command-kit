@@ -97,19 +97,13 @@ async function summarizeGenerationFile(filePath, route, currentSessionId, maxSca
     }
     const userMessages = messages.filter((m) => m.role === 'user');
     const assistantMessages = messages.filter((m) => m.role === 'assistant');
+    const titleUser = userMessages.find((m) => isGoodTitleSeed(m.text))?.text || '';
+    const titleAssistant = assistantMessages.find((m) => isGoodTitleSeed(m.text))?.text || '';
     const lastUser = userMessages[userMessages.length - 1]?.text || '';
     const lastAssistant = assistantMessages[assistantMessages.length - 1]?.text || '';
     const lastPreview = lastAssistant || lastUser;
-    const rawTitleSeed = userMessages[userMessages.length - 1]?.text || '';
-    const titleSeed = truncate(rawTitleSeed, 28);
-    let title;
-    if (activeTitle) {
-        const suffix = titleSeed && titleSeed !== activeTitle ? titleSeed : '历史';
-        title = truncate(`${activeTitle} · ${suffix}`, 50);
-    }
-    else {
-        title = titleSeed || '未命名对话';
-    }
+    const titleSeed = titleUser || titleAssistant ? truncate(titleUser || titleAssistant, 28) : '';
+    const title = titleSeed && titleSeed !== activeTitle ? titleSeed : '历史对话';
     // Derive updatedAt from the last message timestamp or file mtime
     let updatedAt;
     const lastTimestamp = messages[messages.length - 1]?.timestamp;
@@ -204,7 +198,40 @@ function cleanMessageText(text, role) {
             return '[排队消息]';
         }
     }
+    value = value
+        .replace(/\bMEDIA:\S+/g, '')
+        .replace(/\r?\n/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (value === 'NO_REPLY')
+        return '';
     return value;
+}
+function isGoodTitleSeed(text) {
+    const value = text.trim();
+    if (value.length < 2)
+        return false;
+    if (value.startsWith('/'))
+        return false;
+    if (value.startsWith('Conversation info'))
+        return false;
+    if (/^\[[A-Z][a-z]{2}\s+\d{4}-\d{2}-\d{2}/.test(value))
+        return false;
+    if (value.startsWith('你当前在 **WeCom'))
+        return false;
+    if (/^downloading\s+@/i.test(value))
+        return false;
+    if (/^added\s+\d+\s+packages?/i.test(value))
+        return false;
+    if (/^up to date,\s+audited/i.test(value))
+        return false;
+    if (/^npm\s+(warn|notice|error)\b/i.test(value))
+        return false;
+    if (/^sessions_spawn is available\b/i.test(value))
+        return false;
+    if (value === 'NO_REPLY')
+        return false;
+    return true;
 }
 function isRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);

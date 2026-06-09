@@ -4,6 +4,7 @@ export type {
   ActorScope,
   RouteScope,
   ResumeListItem,
+  SessionListOptions,
   SessionSummary,
   GenerationSummary,
   RestoreResult,
@@ -24,6 +25,10 @@ export { RestoreService } from './restore-service.js';
 export {
   formatSessionList,
   formatResumeSuccess,
+  formatResumeHint,
+  formatResumeHelp,
+  formatResumeUsage,
+  formatSessionsRestoreBoundary,
   formatError,
 } from './response-formatter.js';
 export { CommandRouter } from './command-router.js';

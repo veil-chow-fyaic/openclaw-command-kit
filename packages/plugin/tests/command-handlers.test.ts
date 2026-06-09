@@ -4,8 +4,7 @@ import { deriveScopes } from '../src/scope-deriver.js';
 import {
   SessionHistoryService,
   RestoreService,
-  formatSessionList,
-  formatResumeSuccess,
+  formatResumeHelp,
   formatError,
 } from '@fyaic/core';
 import type { PluginCommandContext } from 'openclaw/plugin-sdk/plugins/types';
@@ -104,7 +103,7 @@ describe('SessionCommandHandlers', () => {
       const result = await handlers.handleResume(mockCtx());
 
       expect(result.text).toContain('可恢复的历史对话');
-      expect(result.text).toContain('发送 /resume N 切换到第 N 个历史对话。');
+      expect(result.text).toContain('发送 /resume 序号 继续；/resume help 查看用法。');
       expect(result.text).not.toContain('【OCK】');
     });
 
@@ -114,6 +113,36 @@ describe('SessionCommandHandlers', () => {
       const result = await handlers.handleResume(mockCtx());
 
       expect(result.text).toBe(formatError('route'));
+    });
+  });
+
+  describe('help and alias boundaries', () => {
+    it('returns resume help without resolving scopes', () => {
+      const result = handlers.handleResumeHelp();
+
+      expect(result.text).toBe(formatResumeHelp());
+      expect(deriveScopes).not.toHaveBeenCalled();
+    });
+
+    it('explains that /sessions numeric args do not restore', () => {
+      const result = handlers.handleSessionsNumeric(2);
+
+      expect(result.text).toBe('/sessions 只用于查看和搜索。要继续第 2 个对话，请发送 /resume 2。');
+    });
+
+    it('lists all candidates through explicit all mode', async () => {
+      vi.mocked(deriveScopes).mockResolvedValue(mockScopes());
+      mockHistory.listSessions.mockResolvedValue([mockItem(1)]);
+
+      const result = await handlers.handleResumeList(mockCtx(), undefined, { mode: 'all' });
+
+      expect(mockHistory.listSessions).toHaveBeenCalledWith(
+        mockScopes().actor,
+        mockScopes().route,
+        undefined,
+        { mode: 'all' }
+      );
+      expect(result.text).toContain('可恢复的历史对话');
     });
   });
 

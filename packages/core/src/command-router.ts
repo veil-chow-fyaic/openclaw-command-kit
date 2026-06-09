@@ -12,6 +12,10 @@ import { RestoreService } from './restore-service.js';
 import {
   formatSessionList,
   formatResumeSuccess,
+  formatResumeHint,
+  formatResumeHelp,
+  formatResumeUsage,
+  formatSessionsRestoreBoundary,
   formatError,
 } from './response-formatter.js';
 
@@ -35,27 +39,32 @@ export class CommandRouter {
   ): Promise<CommandResult> {
     const trimmed = rawText.trim();
 
-    if (trimmed === '/sessions') {
-      const items = await this.history.listSessions(actor, route);
-      const current = items.find((i) => i.isCurrent);
-      let text = formatSessionList(items, current);
-      text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
-      await adapter.deliverReply(route, text);
+    const commandMatch = trimmed.match(/^\/(sessions|resume)(?:\s+(.+))?$/);
+    if (!commandMatch) {
+      return { handled: false };
+    }
+
+    const command = commandMatch[1];
+    const args = (commandMatch[2] ?? '').trim();
+
+    if (args.toLowerCase() === 'help') {
+      await adapter.deliverReply(route, formatResumeHelp());
       return { handled: true };
     }
 
-    if (trimmed === '/resume') {
-      const items = await this.history.listSessions(actor, route);
-      const current = items.find((i) => i.isCurrent);
-      let text = formatSessionList(items, current);
-      text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
-      await adapter.deliverReply(route, text);
+    const numericArg = args.match(/^\d+$/);
+    if (command === 'sessions' && numericArg) {
+      const index = parseInt(args, 10);
+      await adapter.deliverReply(route, index > 0 ? formatSessionsRestoreBoundary(index) : formatResumeUsage());
       return { handled: true };
     }
 
-    const resumeMatch = trimmed.match(/^\/resume\s+(\d+)$/);
-    if (resumeMatch) {
-      const index = parseInt(resumeMatch[1], 10);
+    if (command === 'resume' && numericArg) {
+      const index = parseInt(args, 10);
+      if (index <= 0) {
+        await adapter.deliverReply(route, formatResumeUsage());
+        return { handled: true };
+      }
       const result = await this.restore.restoreSession(actor, route, index);
       if (result.success && result.restoredSessionId) {
         const items = await this.history.listSessions(actor, route);
@@ -72,6 +81,20 @@ export class CommandRouter {
       return { handled: true };
     }
 
-    return { handled: false };
+    if ((command === 'resume' && /^\d/.test(args)) || /^\d+\s+/.test(args)) {
+      await adapter.deliverReply(route, formatResumeUsage());
+      return { handled: true };
+    }
+
+    const mode = args.toLowerCase() === 'all' ? 'all' : 'default';
+    const query = args && mode !== 'all' ? args : undefined;
+    const items = await this.history.listSessions(actor, route, query, { mode });
+    const current = items.find((i) => i.isCurrent);
+    let text = formatSessionList(items, current);
+    if (items.length > 0) {
+      text += `\n\n${formatResumeHint()}`;
+    }
+    await adapter.deliverReply(route, text);
+    return { handled: true };
   }
 }

@@ -115,7 +115,7 @@ describe('scanGenerations', () => {
     expect(result[0].title).toBe('Hello');
   });
 
-  it('uses activeTitle prefix when provided', async () => {
+  it('does not prefix historical titles with activeTitle', async () => {
     const dir = setupAgentDir();
     const text = 'Conversation info (untrusted metadata):\n```json\n{"label": "Alice"}\n```\n\nSender (untrusted metadata):\n```json\n{}\n```\n\nHello';
     const lines = [
@@ -125,10 +125,10 @@ describe('scanGenerations', () => {
 
     const route: RouteScope = { provider: 'wecom', sessionKey: 'k', chatType: 'direct', label: 'Alice' };
     const result = await scanGenerations({ agentId: 'main', route, currentSessionId: 's1', currentSessionKey: 'k', activeTitle: 'Alice' });
-    expect(result[0].title).toBe('Alice · Hello');
+    expect(result[0].title).toBe('Hello');
   });
 
-  it('uses 历史 suffix when activeTitle equals titleSeed', async () => {
+  it('uses generic title when activeTitle equals titleSeed', async () => {
     const dir = setupAgentDir();
     const text = 'Conversation info (untrusted metadata):\n```json\n{"label": "Alice"}\n```\n\nSender (untrusted metadata):\n```json\n{}\n```\n\nAlice';
     const lines = [
@@ -138,7 +138,7 @@ describe('scanGenerations', () => {
 
     const route: RouteScope = { provider: 'wecom', sessionKey: 'k', chatType: 'direct', label: 'Alice' };
     const result = await scanGenerations({ agentId: 'main', route, currentSessionId: 's1', currentSessionKey: 'k', activeTitle: 'Alice' });
-    expect(result[0].title).toBe('Alice · 历史');
+    expect(result[0].title).toBe('历史对话');
   });
 
   it('matches exact label with full-width parentheses', async () => {
@@ -197,6 +197,41 @@ describe('scanGenerations', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].title).toBe('Hello');
+  });
+
+  it('skips NO_REPLY previews and timestamp metadata title seeds', async () => {
+    const dir = setupAgentDir();
+    const lines = [
+      makeEvent('user', 'Conversation info\n"label": "Alice"\n[Wed 2026-06-03 19:56 GMT+8] route metadata'),
+      makeEvent('assistant', 'NO_REPLY'),
+      makeEvent('user', 'Downloading @fyaic/openclaw-command-kit@0.1.13'),
+      makeEvent('user', '检查 sessions 列表为什么不可读'),
+      makeEvent('assistant', '已生成报告 MEDIA:/Users/fuyo-aic/report.pdf'),
+    ];
+    writeFileSync(join(dir, 'hist1.jsonl.reset.2026-05-20T08-00-00.000Z'), lines.join('\n'));
+
+    const route: RouteScope = { provider: 'wecom', sessionKey: 'k', chatType: 'direct', label: 'Alice' };
+    const result = await scanGenerations({ agentId: 'main', route, currentSessionId: 's1', currentSessionKey: 'k' });
+
+    expect(result[0].title).toBe('检查 sessions 列表为什么不可读');
+    expect(result[0].lastMessagePreview).toBe('已生成报告');
+    expect(result[0].lastAssistantMessage).toBe('已生成报告');
+  });
+
+  it('uses assistant text for title when all user title seeds are metadata or logs', async () => {
+    const dir = setupAgentDir();
+    const lines = [
+      makeEvent('user', 'Conversation info\n"label": "Alice"\nDownloading @fyaic/openclaw-command-kit@0.1.13'),
+      makeEvent('user', 'Conversation info\n```json\n{"label": "Alice"}\n```\n\n你当前在 **WeCom 单聊**（Alice）里，触发的是 OpenClaw 会话。'),
+      makeEvent('assistant', '插件目录已存在，需要先 remove 再 install。'),
+    ];
+    writeFileSync(join(dir, 'hist1.jsonl.reset.2026-05-20T08-00-00.000Z'), lines.join('\n'));
+
+    const route: RouteScope = { provider: 'wecom', sessionKey: 'k', chatType: 'direct', label: 'Alice' };
+    const result = await scanGenerations({ agentId: 'main', route, currentSessionId: 's1', currentSessionKey: 'k' });
+
+    expect(result[0].title).toBe('插件目录已存在，需要先 remove 再 install…');
+    expect(result[0].lastMessagePreview).toBe('插件目录已存在，需要先 remove 再 install。');
   });
 
   it('sorts results by updatedAt desc', async () => {

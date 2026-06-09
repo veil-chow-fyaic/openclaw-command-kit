@@ -66,7 +66,45 @@ describe('CommandRouter', () => {
     const result = await router.handle('/resume', actor, route, adapter);
     expect(result.handled).toBe(true);
     const replyText = (adapter.deliverReply as any).mock.calls[0][1];
-    expect(replyText).toContain('/resume N');
+    expect(replyText).toContain('发送 /resume 序号 继续；/resume help 查看用法。');
+  });
+
+  it('handles /resume help without resolving history', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/resume help', actor, route, adapter);
+    expect(result.handled).toBe(true);
+    expect(history.listSessions).not.toHaveBeenCalled();
+    const replyText = (adapter.deliverReply as any).mock.calls[0][1];
+    expect(replyText).toContain('/resume 序号');
+    expect(replyText).toContain('/sessions 只用于查看和搜索');
+  });
+
+  it('uses /resume non-numeric args as a search query', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    history.listSessions.mockResolvedValue([makeItem({ title: 'Auth0 调研' })]);
+
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/resume auth0', actor, route, adapter);
+    expect(result.handled).toBe(true);
+    expect(history.listSessions).toHaveBeenCalledWith(actor, route, 'auth0', { mode: 'default' });
+    expect(restore.restoreSession).not.toHaveBeenCalled();
+  });
+
+  it('uses /resume all for the full candidate list', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    history.listSessions.mockResolvedValue([makeItem()]);
+
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/resume all', actor, route, adapter);
+    expect(result.handled).toBe(true);
+    expect(history.listSessions).toHaveBeenCalledWith(actor, route, undefined, { mode: 'all' });
   });
 
   it('handles /resume N', async () => {
@@ -103,12 +141,39 @@ describe('CommandRouter', () => {
     expect(result.handled).toBe(false);
   });
 
-  it('rejects extra arguments on /resume N', async () => {
+  it('handles extra arguments on /resume N as usage error', async () => {
     const history = new SessionHistoryService({} as any) as any;
     const restore = new RestoreService({} as any, history) as any;
     const router = new CommandRouter(history, restore);
 
     const result = await router.handle('/resume 2 extra', actor, route, adapter);
-    expect(result.handled).toBe(false);
+    expect(result.handled).toBe(true);
+    expect(restore.restoreSession).not.toHaveBeenCalled();
+    const replyText = (adapter.deliverReply as any).mock.calls[0][1];
+    expect(replyText).toContain('用法：/resume');
+  });
+
+  it('handles partial numeric /resume args as usage error', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/resume 2abc', actor, route, adapter);
+    expect(result.handled).toBe(true);
+    expect(restore.restoreSession).not.toHaveBeenCalled();
+    const replyText = (adapter.deliverReply as any).mock.calls[0][1];
+    expect(replyText).toContain('用法：/resume');
+  });
+
+  it('keeps /sessions numeric args as a view-only boundary', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/sessions 2', actor, route, adapter);
+    expect(result.handled).toBe(true);
+    expect(restore.restoreSession).not.toHaveBeenCalled();
+    const replyText = (adapter.deliverReply as any).mock.calls[0][1];
+    expect(replyText).toBe('/sessions 只用于查看和搜索。要继续第 2 个对话，请发送 /resume 2。');
   });
 });

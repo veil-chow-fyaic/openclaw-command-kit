@@ -33,6 +33,10 @@ export interface ResumeListItem {
   sessionFile?: string;
 }
 
+export interface SessionListOptions {
+  mode?: 'default' | 'all';
+}
+
 export interface SessionSummary {
   sessionId: string;
   title?: string;

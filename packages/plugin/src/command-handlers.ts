@@ -6,6 +6,10 @@ import {
   RestoreService,
   formatSessionList,
   formatResumeSuccess,
+  formatResumeHint,
+  formatResumeHelp,
+  formatResumeUsage,
+  formatSessionsRestoreBoundary,
   formatError,
 } from '@fyaic/core';
 import type { PluginCommandContext, PluginCommandResult } from 'openclaw/plugin-sdk/plugin-entry';
@@ -32,14 +36,15 @@ export class SessionCommandHandlers {
 
   async handleSessions(
     ctx: PluginCommandContext,
-    query?: string
+    query?: string,
+    options: { mode?: 'default' | 'all' } = {}
   ): Promise<PluginCommandResult> {
     const result = await deriveScopes(ctx, this.gateway);
     if (!isSuccess(result)) {
       return { text: formatError(result.reason) };
     }
 
-    const items = await this.history.listSessions(result.actor, result.route, query);
+    const items = await this.history.listSessions(result.actor, result.route, query, options);
     const current = items.find((i) => i.isCurrent);
 
     if (items.length === 0 && query) {
@@ -48,7 +53,7 @@ export class SessionCommandHandlers {
 
     let text = formatSessionList(items, current);
     if (items.length > 0) {
-      text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
+      text += `\n\n${formatResumeHint()}`;
     } else {
       text += '\n\n提示：多聊几句后，新对话会自动出现在这里。';
     }
@@ -65,9 +70,29 @@ export class SessionCommandHandlers {
     const current = items.find((i) => i.isCurrent);
     let text = formatSessionList(items, current);
     if (items.length > 0) {
-      text += '\n\n发送 /resume N 切换到第 N 个历史对话。';
+      text += `\n\n${formatResumeHint()}`;
     }
     return { text };
+  }
+
+  async handleResumeList(
+    ctx: PluginCommandContext,
+    query?: string,
+    options: { mode?: 'default' | 'all' } = {}
+  ): Promise<PluginCommandResult> {
+    return this.handleSessions(ctx, query, options);
+  }
+
+  handleResumeHelp(): PluginCommandResult {
+    return { text: formatResumeHelp() };
+  }
+
+  handleSessionsNumeric(index: number): PluginCommandResult {
+    return { text: formatSessionsRestoreBoundary(index) };
+  }
+
+  handleResumeUsage(): PluginCommandResult {
+    return { text: formatResumeUsage() };
   }
 
   async handleResumeByIndex(

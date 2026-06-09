@@ -57,6 +57,7 @@ describe('RestoreService', () => {
     const result = await service.restoreSession(actor, route, 999);
     expect(result.success).toBe(false);
     expect(result.error).toBe('invalid_index');
+    expect(history.listSessions).toHaveBeenCalledWith(actor, route, undefined, { mode: 'all' });
   });
 
   it('returns invalid_index when scoped list is empty', async () => {

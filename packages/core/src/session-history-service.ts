@@ -3,8 +3,9 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { homedir } from 'node:os';
+import { createInterface } from 'node:readline';
 import type { GatewayClient } from './gateway-client.js';
-import type { ActorScope, RouteScope, ResumeListItem } from './types.js';
+import type { ActorScope, RouteScope, ResumeListItem, SessionListOptions } from './types.js';
 import { scanGenerations } from './session-generation-scanner.js';
 
 interface RawSession {
@@ -44,7 +45,8 @@ export class SessionHistoryService {
   async listSessions(
     actor: ActorScope,
     route: RouteScope,
-    query?: string
+    query?: string,
+    options: SessionListOptions = {}
   ): Promise<ResumeListItem[]> {
     // Fail-closed: actor must be valid and consistent with route
     if (!actor.senderId) return [];
@@ -64,6 +66,8 @@ export class SessionHistoryService {
     const activeItems = rawSessions
       .map((s) => this._toItem(s, route))
       .filter((item): item is ResumeListItem => item !== null);
+
+    await this._enrichItemsFromLocalTranscripts(activeItems, route);
 
     // Enrich active session preview from chat.history
     const currentRouteItems = activeItems.filter((item) => item.isCurrent);
@@ -150,10 +154,22 @@ export class SessionHistoryService {
     // Merge active + historical, sort by updatedAt desc
     const merged = [...activeItems, ...historicalItems];
     merged.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    markOnlyNewestCurrent(merged);
+    normalizeRouteLabelTitles(merged, route);
 
-    // Apply query filter if provided
+    // Indexes are assigned from the full candidate set. Filtered/default views
+    // must not renumber, otherwise a stateless `/resume N` could restore a
+    // different item from the one shown in `/resume all` or `/resume <query>`.
+    merged.forEach((item, idx) => {
+      item.displayIndex = idx + 1;
+    });
+
+    const visible = options.mode === 'all' ? merged : merged.filter(shouldShowInDefaultList);
+
+    // Apply query filter if provided. Keep displayIndex stable so numbers shown
+    // by `/sessions <query>` can still be used directly with `/resume N`.
     const filtered = query
-      ? merged.filter((item) => {
+      ? visible.filter((item) => {
           const q = query.toLowerCase();
           return (
             item.title.toLowerCase().includes(q) ||
@@ -162,12 +178,7 @@ export class SessionHistoryService {
             false
           );
         })
-      : merged;
-
-    // Assign display indexes (1-based)
-    filtered.forEach((item, idx) => {
-      item.displayIndex = idx + 1;
-    });
+      : visible;
 
     return filtered;
   }
@@ -198,7 +209,8 @@ export class SessionHistoryService {
     if (!sameDeliveryRoute && !unscopedManual) return null;
 
     const updatedAt = raw.updatedAt ? new Date(raw.updatedAt) : new Date();
-    const title = raw.title || raw.displayName || origin.label || titleFromSessionKey(sessionKey);
+    const rawTitle = raw.title || raw.displayName || origin.label || titleFromSessionKey(sessionKey);
+    const title = normalizeWeakTitle(rawTitle);
 
     return {
       displayIndex: 0, // assigned later
@@ -209,6 +221,86 @@ export class SessionHistoryService {
       isCurrent: exactRouteMatch,
       isRestorable: true,
       sessionFile: raw.sessionFile ? path.basename(raw.sessionFile) : undefined,
+    };
+  }
+
+  private async _enrichItemsFromLocalTranscripts(items: ResumeListItem[], route: RouteScope): Promise<void> {
+    await Promise.all(
+      items.map(async (item) => {
+        const summary = await this._summarizeSessionFile(item);
+        if (!summary) return;
+
+        if (summary.title && shouldReplaceTitle(item.title, route)) {
+          item.title = summary.title;
+        }
+        if (!item.lastMessagePreview && summary.lastMessagePreview) {
+          item.lastMessagePreview = summary.lastMessagePreview;
+        }
+        if (!item.lastUserMessage && summary.lastUserMessage) {
+          item.lastUserMessage = summary.lastUserMessage;
+        }
+        if (!item.lastAssistantMessage && summary.lastAssistantMessage) {
+          item.lastAssistantMessage = summary.lastAssistantMessage;
+        }
+      })
+    );
+  }
+
+  private async _summarizeSessionFile(item: ResumeListItem): Promise<SessionFileSummary | null> {
+    const fileName = item.sessionFile || `${item.sessionId}.jsonl`;
+    if (!fileName || fileName.includes('..')) return null;
+    const filePath = path.join(this.sessionsDir, fileName);
+    if (!fs.existsSync(filePath)) return null;
+
+    const messages: Array<{ role: string; text: string }> = [];
+    const stream = fs.createReadStream(filePath, { encoding: 'utf-8' });
+    const rl = createInterface({ input: stream, crlfDelay: Infinity });
+    let lineCount = 0;
+
+    try {
+      for await (const line of rl) {
+        lineCount++;
+        if (lineCount > 800) break;
+
+        let event: unknown;
+        try {
+          event = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        if (!event || typeof event !== 'object') continue;
+        const msg = (event as { message?: unknown }).message;
+        if (!msg || typeof msg !== 'object') continue;
+
+        const role = String((msg as { role?: unknown }).role || '');
+        if (role !== 'user' && role !== 'assistant') continue;
+
+        let text = extractMessageText(msg).trim();
+        if (role === 'user') text = cleanUserMessage(text);
+        text = cleanDisplayText(text);
+        if (!text) continue;
+        messages.push({ role, text: shortenText(text, 120) });
+      }
+    } finally {
+      rl.close();
+      stream.destroy();
+    }
+
+    if (messages.length === 0) return null;
+
+    const userMessages = messages.filter((m) => m.role === 'user');
+    const assistantMessages = messages.filter((m) => m.role === 'assistant');
+    const titleSeed =
+      userMessages.find((m) => isGoodTitleSeed(m.text))?.text ||
+      assistantMessages.find((m) => isGoodTitleSeed(m.text))?.text;
+    const lastUser = userMessages[userMessages.length - 1]?.text || '';
+    const lastAssistant = assistantMessages[assistantMessages.length - 1]?.text || '';
+
+    return {
+      title: titleSeed ? truncateForTitle(titleSeed, 42) : '',
+      lastMessagePreview: shortenText(lastAssistant || lastUser, 80),
+      lastUserMessage: lastUser || undefined,
+      lastAssistantMessage: lastAssistant || undefined,
     };
   }
 
@@ -238,6 +330,13 @@ export class SessionHistoryService {
   }
 }
 
+interface SessionFileSummary {
+  title: string;
+  lastMessagePreview: string;
+  lastUserMessage?: string;
+  lastAssistantMessage?: string;
+}
+
 function mergeRawSessions(primary: RawSession[], secondary: RawSession[]): RawSession[] {
   const bySessionId = new Map<string, RawSession>();
 
@@ -257,6 +356,40 @@ function mergeRawSessions(primary: RawSession[], secondary: RawSession[]): RawSe
   }
 
   return Array.from(bySessionId.values());
+}
+
+function markOnlyNewestCurrent(items: ResumeListItem[]): void {
+  let currentSeen = false;
+  for (const item of items) {
+    if (!item.isCurrent) continue;
+    if (currentSeen) {
+      item.isCurrent = false;
+      continue;
+    }
+    currentSeen = true;
+  }
+}
+
+function normalizeRouteLabelTitles(items: ResumeListItem[], route: RouteScope): void {
+  const routeLabel = normalizeForTitle(route.label || '');
+  if (!routeLabel) return;
+
+  for (const item of items) {
+    if (item.isCurrent) continue;
+    if (normalizeForTitle(item.title) !== routeLabel) continue;
+    item.title = item.lastMessagePreview ? '历史对话' : '同一路由历史对话';
+  }
+}
+
+function shouldShowInDefaultList(item: ResumeListItem): boolean {
+  if (item.isCurrent) return true;
+
+  const title = normalizeForTitle(item.title);
+  if (['网关历史会话', 'openclaw连通性检查', 'acp工具检查'].includes(title)) {
+    return false;
+  }
+
+  return true;
 }
 
 function sessionMatchesRoute(raw: RawSession, route: RouteScope, sessionKey: string): boolean {
@@ -296,6 +429,70 @@ function titleFromSessionKey(sessionKey: string): string {
   if (!key) return '未命名对话';
   const parts = key.split(':');
   return parts[parts.length - 1] || key;
+}
+
+function shouldReplaceTitle(title: string, route: RouteScope): boolean {
+  const normalizedTitle = normalizeForTitle(title);
+  const normalizedRouteLabel = normalizeForTitle(route.label || '');
+  if (!normalizedTitle) return true;
+  if (normalizedTitle === '未命名对话') return true;
+  if (['网关历史会话', 'openclaw连通性检查', 'acp工具检查', '会议跟进', '历史对话'].includes(normalizedTitle)) return true;
+  if (normalizedRouteLabel && normalizedTitle === normalizedRouteLabel) return true;
+  if (/gateway-fallback-[0-9a-f-]{12,}/i.test(title)) return true;
+  if (/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(title)) return true;
+  if (/^(acp-|codex-openclaw|meeting-follow-up)(-|$)/i.test(title)) return true;
+  if (title.trim().startsWith('你当前在 **WeCom')) return true;
+  return false;
+}
+
+function normalizeWeakTitle(title: string): string {
+  const value = title.trim();
+  if (value.startsWith('你当前在 **WeCom')) return '历史对话';
+  if (/^gateway-fallback-[0-9a-f-]{12,}$/i.test(value)) return '网关历史会话';
+  if (/^codex-openclaw/i.test(value)) return 'OpenClaw 连通性检查';
+  if (/^acp-/i.test(value)) return 'ACP 工具检查';
+  if (/^meeting-follow-up/i.test(value)) return '会议跟进';
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+    return '历史对话';
+  }
+  return value || '未命名对话';
+}
+
+function normalizeForTitle(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, '');
+}
+
+function isGoodTitleSeed(text: string): boolean {
+  const value = text.trim();
+  if (value.length < 2) return false;
+  if (value.startsWith('/')) return false;
+  if (value.startsWith('Conversation info')) return false;
+  if (value.startsWith('你当前在 **WeCom')) return false;
+  if (value.startsWith('[图片]') || value.startsWith('[排队消息]')) return false;
+  if (/^\[[A-Z][a-z]{2}\s+\d{4}-\d{2}-\d{2}/.test(value)) return false;
+  if (/^downloading\s+@/i.test(value)) return false;
+  if (/^added\s+\d+\s+packages?/i.test(value)) return false;
+  if (/^up to date,\s+audited/i.test(value)) return false;
+  if (/^npm\s+(warn|notice|error)\b/i.test(value)) return false;
+  if (/^sessions_spawn is available\b/i.test(value)) return false;
+  if (value === 'NO_REPLY') return false;
+  return true;
+}
+
+function cleanDisplayText(text: string): string {
+  const value = text
+    .replace(/\bMEDIA:\S+/g, '')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (value === 'NO_REPLY') return '';
+  return value;
+}
+
+function truncateForTitle(text: string, maxLen: number): string {
+  const cleaned = cleanDisplayText(text);
+  if (cleaned.length <= maxLen) return cleaned;
+  return cleaned.slice(0, maxLen) + '…';
 }
 
 function normalizeRouteTarget(value: string | undefined, provider: string): string {

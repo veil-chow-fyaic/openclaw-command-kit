@@ -131,6 +131,43 @@ describe('SessionHistoryService', () => {
     ]);
   });
 
+  it('marks only the newest exact route item as current', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        {
+          key: 'agent:main:wecom-default-veil（周威）',
+          sessionId: 'older-exact',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', label: 'Veil（周威）', to: 'Veil（周威）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Veil（周威）' },
+          updatedAt: 1000,
+        },
+        {
+          key: 'agent:main:wecom-default-veil（周威）',
+          sessionId: 'newer-exact',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', label: 'Veil（周威）', to: 'Veil（周威）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Veil（周威）' },
+          updatedAt: 3000,
+        },
+      ],
+    });
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const veilRoute: RouteScope = {
+      ...route,
+      sessionKey: 'wecom-default-veil（周威）',
+      label: 'Veil（周威）',
+    };
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, veilRoute);
+
+    expect(items.filter((item) => item.isCurrent)).toHaveLength(1);
+    expect(items.find((item) => item.isCurrent)?.sessionId).toBe('newer-exact');
+    expect(items.find((item) => item.sessionId === 'older-exact')?.title).toBe('同一路由历史对话');
+  });
+
   it('supplements gateway sessions from local sessions.json when gateway omits raw store entries', async () => {
     const gateway = new GatewayClient() as any;
     gateway.sessionsList.mockResolvedValue({
@@ -216,7 +253,7 @@ describe('SessionHistoryService', () => {
     const service = new SessionHistoryService(gateway);
     const directItems = await service.listSessions(actor, route);
     expect(directItems.map((item) => item.sessionId)).toEqual(['manual-session']);
-    expect(directItems[0].title).toBe('meeting-follow-up');
+    expect(directItems[0].title).toBe('会议跟进');
     expect(directItems[0].isCurrent).toBe(false);
 
     const groupItems = await service.listSessions(actor, { ...route, chatType: 'group' });
@@ -254,6 +291,199 @@ describe('SessionHistoryService', () => {
     expect(items).toHaveLength(1);
     expect(items[0].sessionId).toBe('manual-session');
     expect(items[0].sessionFile).toBe('manual-session.jsonl');
+  });
+
+  it('replaces weak fallback titles with transcript-derived titles and previews', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({ sessions: [] });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:gateway-fallback-45b17dce-923f-4844-8473-75b34b6d9347': {
+          sessionId: 'fallback-session',
+          sessionFile: 'fallback-session.jsonl',
+          updatedAt: 6000,
+        },
+      }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'fallback-session.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-06-08T09:59:00.000Z',
+          message: { role: 'user', content: '你当前在 **WeCom 单聊**（Veil（周威））里，请回复这个聊天。' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-06-08T09:59:30.000Z',
+          message: { role: 'user', content: 'Downloading @fyaic/openclaw-command-kit@0.1.13' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-06-08T10:00:00.000Z',
+          message: { role: 'user', content: '帮我检查 OpenClaw 的 sessions 插件为什么只显示两个' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-06-08T10:02:00.000Z',
+          message: { role: 'assistant', content: '原因是 gateway list 漏掉了本地 store 条目。 MEDIA:/Users/fuyo-aic/report.pdf' },
+        }),
+      ].join('\n'),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe('帮我检查 OpenClaw 的 sessions 插件为什么只显示两个');
+    expect(items[0].lastMessagePreview).toBe('原因是 gateway list 漏掉了本地 store 条目。');
+    expect(items[0].lastUserMessage).toBe('帮我检查 OpenClaw 的 sessions 插件为什么只显示两个');
+    expect(items[0].lastAssistantMessage).toBe('原因是 gateway list 漏掉了本地 store 条目。');
+  });
+
+  it('hides low-signal diagnostic sessions from the default list', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({ sessions: [] });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:wecom-default-弗忧联盟-周威': {
+          sessionId: 'active',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: '周威' },
+          sessionFile: 'active.jsonl',
+          updatedAt: 9000,
+        },
+        'agent:main:acp-tool-token-check': {
+          sessionId: 'acp-check',
+          sessionFile: 'acp-check.jsonl',
+          updatedAt: 8000,
+        },
+        'agent:main:codex-openclaw-web-cbp-check': {
+          sessionId: 'openclaw-check',
+          sessionFile: 'openclaw-check.jsonl',
+          updatedAt: 7000,
+        },
+        'agent:main:gateway-fallback-45b17dce-923f-4844-8473-75b34b6d9347': {
+          sessionId: 'empty-fallback',
+          sessionFile: 'empty-fallback.jsonl',
+          updatedAt: 6000,
+        },
+        'agent:main:gateway-fallback-c38be703-2f2c-40af-a7e4-03203d2fd45f': {
+          sessionId: 'human-fallback',
+          sessionFile: 'human-fallback.jsonl',
+          updatedAt: 5000,
+        },
+      }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'acp-check.jsonl'),
+      JSON.stringify({
+        timestamp: '2026-06-08T10:02:00.000Z',
+        message: { role: 'assistant', content: 'sessions_spawn is available (runtime: "subagent")' },
+      }),
+      'utf-8'
+    );
+    fs.writeFileSync(path.join(testSessionsDir, 'openclaw-check.jsonl'), '', 'utf-8');
+    fs.writeFileSync(path.join(testSessionsDir, 'empty-fallback.jsonl'), '', 'utf-8');
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'human-fallback.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-06-08T10:00:00.000Z',
+          message: { role: 'user', content: '继续排查 npm 分发后的 sessions 展示问题' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-06-08T10:02:00.000Z',
+          message: { role: 'assistant', content: '已定位为历史标题没有从 transcript 回填。' },
+        }),
+      ].join('\n'),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route);
+
+    expect(items.map((item) => item.sessionId)).toEqual(['active', 'human-fallback']);
+    expect(items.find((item) => item.sessionId === 'human-fallback')?.title).toBe('继续排查 npm 分发后的 sessions 展示问题');
+
+    const allItems = await service.listSessions(actor, route, undefined, { mode: 'all' });
+    expect(allItems.map((item) => item.sessionId)).toEqual([
+      'active',
+      'acp-check',
+      'openclaw-check',
+      'empty-fallback',
+      'human-fallback',
+    ]);
+  });
+
+  it('normalizes raw route-instruction titles from the session store', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({ sessions: [] });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:explicit:route-instruction': {
+          sessionId: 'route-instruction',
+          title: '你当前在 **WeCom 单聊**（Veil（周威））里，请回复这个聊天。',
+          sessionFile: 'route-instruction.jsonl',
+          updatedAt: 6000,
+        },
+      }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'route-instruction.jsonl'),
+      JSON.stringify({
+        timestamp: '2026-06-08T10:02:00.000Z',
+        message: { role: 'assistant', content: 'Veil，这个错误很简单，插件目录已存在。' },
+      }),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe('Veil，这个错误很简单，插件目录已存在。');
+    expect(items[0].lastMessagePreview).toBe('Veil，这个错误很简单，插件目录已存在。');
+  });
+
+  it('keeps display indexes stable when filtering by query', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({ sessions: [] });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:explicit:alpha': {
+          sessionId: 'alpha',
+          title: 'Alpha 调研',
+          updatedAt: 3000,
+        },
+        'agent:main:explicit:beta': {
+          sessionId: 'beta',
+          title: 'Beta 实现',
+          updatedAt: 2000,
+        },
+        'agent:main:explicit:gamma': {
+          sessionId: 'gamma',
+          title: 'Gamma 发布',
+          updatedAt: 1000,
+        },
+      }),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route, 'Gamma');
+
+    expect(items).toHaveLength(1);
+    expect(items[0].sessionId).toBe('gamma');
+    expect(items[0].displayIndex).toBe(3);
   });
 
   it('sorts by updatedAt desc', async () => {

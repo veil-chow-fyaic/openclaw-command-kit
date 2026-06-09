@@ -5,8 +5,16 @@ export declare class SessionCommandHandlers {
     private history;
     private restore;
     constructor(gateway?: GatewayClient, history?: SessionHistoryService, restore?: RestoreService);
-    handleSessions(ctx: PluginCommandContext, query?: string): Promise<PluginCommandResult>;
+    handleSessions(ctx: PluginCommandContext, query?: string, options?: {
+        mode?: 'default' | 'all';
+    }): Promise<PluginCommandResult>;
     handleResume(ctx: PluginCommandContext): Promise<PluginCommandResult>;
+    handleResumeList(ctx: PluginCommandContext, query?: string, options?: {
+        mode?: 'default' | 'all';
+    }): Promise<PluginCommandResult>;
+    handleResumeHelp(): PluginCommandResult;
+    handleSessionsNumeric(index: number): PluginCommandResult;
+    handleResumeUsage(): PluginCommandResult;
     handleResumeByIndex(ctx: PluginCommandContext, index: number): Promise<PluginCommandResult>;
     handleWhereami(ctx: PluginCommandContext): Promise<PluginCommandResult>;
 }

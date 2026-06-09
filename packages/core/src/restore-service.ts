@@ -21,7 +21,7 @@ export class RestoreService {
     displayIndex: number
   ): Promise<RestoreResult> {
     // 1. Recompute scoped list
-    const items = await this.history.listSessions(actor, route);
+    const items = await this.history.listSessions(actor, route, undefined, { mode: 'all' });
     if (items.length === 0) {
       return {
         success: false,
@@ -143,7 +143,7 @@ export class RestoreService {
   private async _validateBelongsToRoute(actor: ActorScope, item: ResumeListItem, route: RouteScope): Promise<boolean> {
     // Secondary safety check: recompute the scoped list with the same actor+route
     // and confirm the selected item is still present.
-    const items = await this.history.listSessions(actor, route);
+    const items = await this.history.listSessions(actor, route, undefined, { mode: 'all' });
     return items.some((i) => i.sessionId === item.sessionId);
   }
 
