@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import { scanGenerations } from './session-generation-scanner.js';
+import { cleanTranscriptText, isGoodPreviewText, isGoodTitleSeed, shortenText, truncateForTitle, } from './session-text.js';
 export class SessionHistoryService {
     gateway;
     sessionsDir;
@@ -40,11 +41,8 @@ export class SessionHistoryService {
                     if (!m || typeof m !== 'object')
                         continue;
                     const role = String(m.role || '');
-                    let text = extractMessageText(m).trim();
-                    if (role === 'user') {
-                        text = cleanUserMessage(text);
-                    }
-                    if ((role === 'user' || role === 'assistant') && text) {
+                    const text = cleanTranscriptText(extractMessageText(m), role);
+                    if ((role === 'user' || role === 'assistant') && text && isGoodPreviewText(text)) {
                         textMsgs.push({ role, text: shortenText(text, 72) });
                     }
                 }
@@ -229,10 +227,7 @@ export class SessionHistoryService {
                 const role = String(msg.role || '');
                 if (role !== 'user' && role !== 'assistant')
                     continue;
-                let text = extractMessageText(msg).trim();
-                if (role === 'user')
-                    text = cleanUserMessage(text);
-                text = cleanDisplayText(text);
+                const text = cleanTranscriptText(extractMessageText(msg), role);
                 if (!text)
                     continue;
                 messages.push({ role, text: shortenText(text, 120) });
@@ -248,8 +243,10 @@ export class SessionHistoryService {
         const assistantMessages = messages.filter((m) => m.role === 'assistant');
         const titleSeed = userMessages.find((m) => isGoodTitleSeed(m.text))?.text ||
             assistantMessages.find((m) => isGoodTitleSeed(m.text))?.text;
-        const lastUser = userMessages[userMessages.length - 1]?.text || '';
-        const lastAssistant = assistantMessages[assistantMessages.length - 1]?.text || '';
+        const previewUsers = userMessages.filter((m) => isGoodPreviewText(m.text));
+        const previewAssistants = assistantMessages.filter((m) => isGoodPreviewText(m.text));
+        const lastUser = previewUsers[previewUsers.length - 1]?.text || '';
+        const lastAssistant = previewAssistants[previewAssistants.length - 1]?.text || '';
         return {
             title: titleSeed ? truncateForTitle(titleSeed, 42) : '',
             lastMessagePreview: shortenText(lastAssistant || lastUser, 80),
@@ -413,50 +410,6 @@ function normalizeWeakTitle(title) {
 function normalizeForTitle(value) {
     return value.trim().toLowerCase().replace(/\s+/g, '');
 }
-function isGoodTitleSeed(text) {
-    const value = text.trim();
-    if (value.length < 2)
-        return false;
-    if (value.startsWith('/'))
-        return false;
-    if (value.startsWith('Conversation info'))
-        return false;
-    if (value.startsWith('你当前在 **WeCom'))
-        return false;
-    if (value.startsWith('[图片]') || value.startsWith('[排队消息]'))
-        return false;
-    if (/^\[[A-Z][a-z]{2}\s+\d{4}-\d{2}-\d{2}/.test(value))
-        return false;
-    if (/^downloading\s+@/i.test(value))
-        return false;
-    if (/^added\s+\d+\s+packages?/i.test(value))
-        return false;
-    if (/^up to date,\s+audited/i.test(value))
-        return false;
-    if (/^npm\s+(warn|notice|error)\b/i.test(value))
-        return false;
-    if (/^sessions_spawn is available\b/i.test(value))
-        return false;
-    if (value === 'NO_REPLY')
-        return false;
-    return true;
-}
-function cleanDisplayText(text) {
-    const value = text
-        .replace(/\bMEDIA:\S+/g, '')
-        .replace(/\r?\n/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    if (value === 'NO_REPLY')
-        return '';
-    return value;
-}
-function truncateForTitle(text, maxLen) {
-    const cleaned = cleanDisplayText(text);
-    if (cleaned.length <= maxLen)
-        return cleaned;
-    return cleaned.slice(0, maxLen) + '…';
-}
 function normalizeRouteTarget(value, provider) {
     let normalized = (value ?? '').trim().toLowerCase();
     if (!normalized)
@@ -510,32 +463,5 @@ function extractMessageText(message) {
         return parts.join('\n');
     }
     return '';
-}
-function shortenText(text, limit) {
-    const cleaned = text.replace(/\r?\n/g, ' ').trim();
-    if (cleaned.length <= limit)
-        return cleaned;
-    return cleaned.slice(0, limit) + '…';
-}
-function cleanUserMessage(text) {
-    let value = text.trim();
-    // Strip the OpenClaw metadata envelope that precedes the real user message.
-    if (value.includes('```')) {
-        const parts = value.split('```');
-        if (value.includes('Sender (untrusted metadata):') && parts.length >= 4) {
-            value = parts.slice(4).join('```').trim();
-        }
-        else if ((value.includes('Conversation info') || value.includes('untrusted metadata')) &&
-            parts.length >= 3) {
-            value = parts.slice(2).join('```').trim();
-        }
-    }
-    if (value.startsWith('[media attached:')) {
-        return '[图片]';
-    }
-    if (value.startsWith('[Queued messages while agent was busy]')) {
-        return '[排队消息]';
-    }
-    return value;
 }
 //# sourceMappingURL=session-history-service.js.map

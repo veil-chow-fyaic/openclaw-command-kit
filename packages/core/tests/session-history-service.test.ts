@@ -341,6 +341,84 @@ describe('SessionHistoryService', () => {
     expect(items[0].lastAssistantMessage).toBe('原因是 gateway list 漏掉了本地 store 条目。');
   });
 
+  it('ignores gateway progress facts and command replies when summarizing transcripts', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({ sessions: [] });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:explicit:gateway-fallback-45b17dce-923f-4844-8473-75b34b6d9347': {
+          sessionId: 'fallback-session',
+          sessionFile: 'fallback-session.jsonl',
+          updatedAt: 6000,
+        },
+      }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'fallback-session.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-06-08T09:59:00.000Z',
+          message: { role: 'assistant', content: 'ACP gateway progress fact: session list refreshed for route wecom-default-veil' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-06-08T10:00:00.000Z',
+          message: { role: 'user', content: '继续完善 /resume 列表展示体验' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-06-08T10:01:00.000Z',
+          message: { role: 'assistant', content: '可恢复的历史对话（2 个）\n\n1. 当前对话 · 刚刚' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-06-08T10:02:00.000Z',
+          message: { role: 'assistant', content: '已经把低信号标题过滤掉。' },
+        }),
+      ].join('\n'),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe('继续完善 /resume 列表展示体验');
+    expect(items[0].lastMessagePreview).toBe('已经把低信号标题过滤掉。');
+  });
+
+  it('does not use a recent /sessions reply as the active preview', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        {
+          key: 'agent:main:wecom-default-弗忧联盟-周威',
+          sessionId: 'active',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: '周威' },
+          updatedAt: 9000,
+        },
+      ],
+    });
+    gateway.chatHistory.mockResolvedValue({
+      messages: [
+        { role: 'user', content: '继续完善 /resume 列表体验' },
+        { role: 'assistant', content: '我会先过滤低信号标题。' },
+        { role: 'user', content: '/sessions' },
+        { role: 'assistant', content: '可恢复的历史对话（2 个）\n\n1. 当前对话 · 刚刚' },
+      ],
+    });
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].lastUserMessage).toBe('继续完善 /resume 列表体验');
+    expect(items[0].lastAssistantMessage).toBe('我会先过滤低信号标题。');
+    expect(items[0].lastMessagePreview).toBe('我会先过滤低信号标题。');
+  });
+
   it('hides low-signal diagnostic sessions from the default list', async () => {
     const gateway = new GatewayClient() as any;
     gateway.sessionsList.mockResolvedValue({ sessions: [] });

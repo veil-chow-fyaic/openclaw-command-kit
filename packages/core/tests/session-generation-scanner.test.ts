@@ -218,6 +218,25 @@ describe('scanGenerations', () => {
     expect(result[0].lastAssistantMessage).toBe('已生成报告');
   });
 
+  it('skips gateway progress facts and command replies in title and preview', async () => {
+    const dir = setupAgentDir();
+    const lines = [
+      makeEvent('user', 'Conversation info\n"label": "Alice"\n[Wed 2026-06-03 19:56 GMT+8] route metadata'),
+      makeEvent('assistant', 'ACP gateway progress fact: route refreshed'),
+      makeEvent('user', '继续完善 /resume 列表展示体验'),
+      makeEvent('assistant', '可恢复的历史对话（2 个）\n\n1. 当前对话 · 刚刚'),
+      makeEvent('assistant', '已经过滤掉内部状态消息'),
+    ];
+    writeFileSync(join(dir, 'hist1.jsonl.reset.2026-05-20T08-00-00.000Z'), lines.join('\n'));
+
+    const route: RouteScope = { provider: 'wecom', sessionKey: 'k', chatType: 'direct', label: 'Alice' };
+    const result = await scanGenerations({ agentId: 'main', route, currentSessionId: 's1', currentSessionKey: 'k' });
+
+    expect(result[0].title).toBe('继续完善 /resume 列表展示体验');
+    expect(result[0].lastMessagePreview).toBe('已经过滤掉内部状态消息');
+    expect(result[0].lastAssistantMessage).toBe('已经过滤掉内部状态消息');
+  });
+
   it('uses assistant text for title when all user title seeds are metadata or logs', async () => {
     const dir = setupAgentDir();
     const lines = [

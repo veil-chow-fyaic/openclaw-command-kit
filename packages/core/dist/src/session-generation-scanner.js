@@ -6,6 +6,7 @@ import { readdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
+import { cleanTranscriptText, isGoodPreviewText, isGoodTitleSeed, truncateForTitle, } from './session-text.js';
 export async function scanGenerations(options) {
     const { agentId, route, currentSessionId, maxScanLinesPerFile = 500, activeTitle } = options;
     const sessionsDir = process.env.OPENCLAW_SESSIONS_DIR || join(homedir(), '.openclaw', 'agents', agentId, 'sessions');
@@ -76,7 +77,7 @@ async function summarizeGenerationFile(filePath, route, currentSessionId, maxSca
                 }
                 const role = String(msg.role || '');
                 if ((role === 'user' || role === 'assistant') && lineCount <= maxScanLines) {
-                    const cleaned = cleanMessageText(text, role);
+                    const cleaned = cleanTranscriptText(text, role);
                     if (cleaned) {
                         messages.push({
                             role,
@@ -99,10 +100,12 @@ async function summarizeGenerationFile(filePath, route, currentSessionId, maxSca
     const assistantMessages = messages.filter((m) => m.role === 'assistant');
     const titleUser = userMessages.find((m) => isGoodTitleSeed(m.text))?.text || '';
     const titleAssistant = assistantMessages.find((m) => isGoodTitleSeed(m.text))?.text || '';
-    const lastUser = userMessages[userMessages.length - 1]?.text || '';
-    const lastAssistant = assistantMessages[assistantMessages.length - 1]?.text || '';
+    const previewUsers = userMessages.filter((m) => isGoodPreviewText(m.text));
+    const previewAssistants = assistantMessages.filter((m) => isGoodPreviewText(m.text));
+    const lastUser = previewUsers[previewUsers.length - 1]?.text || '';
+    const lastAssistant = previewAssistants[previewAssistants.length - 1]?.text || '';
     const lastPreview = lastAssistant || lastUser;
-    const titleSeed = titleUser || titleAssistant ? truncate(titleUser || titleAssistant, 28) : '';
+    const titleSeed = titleUser || titleAssistant ? truncateForTitle(titleUser || titleAssistant, 28) : '';
     const title = titleSeed && titleSeed !== activeTitle ? titleSeed : '历史对话';
     // Derive updatedAt from the last message timestamp or file mtime
     let updatedAt;
@@ -172,67 +175,6 @@ function extractTextContent(content) {
     }
     return parts.join('\n');
 }
-function cleanMessageText(text, role) {
-    let value = text.trim();
-    if (role === 'user') {
-        // Strip the OpenClaw metadata envelope that precedes the real user message.
-        // OpenClaw prepends 1-2 JSON metadata blocks wrapped in ``` before the
-        // actual user text. We remove them by splitting on ``` and discarding the
-        // leading metadata segments.
-        if (value.includes('```')) {
-            const parts = value.split('```');
-            // Typical envelope: Conversation info + Sender metadata = 4+ parts
-            // Some formats have only Conversation info = 3+ parts
-            if (value.includes('Sender (untrusted metadata):') && parts.length >= 4) {
-                value = parts.slice(4).join('```').trim();
-            }
-            else if ((value.includes('Conversation info') || value.includes('untrusted metadata')) &&
-                parts.length >= 3) {
-                value = parts.slice(2).join('```').trim();
-            }
-        }
-        if (value.startsWith('[media attached:')) {
-            return '[图片]';
-        }
-        if (value.startsWith('[Queued messages while agent was busy]')) {
-            return '[排队消息]';
-        }
-    }
-    value = value
-        .replace(/\bMEDIA:\S+/g, '')
-        .replace(/\r?\n/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    if (value === 'NO_REPLY')
-        return '';
-    return value;
-}
-function isGoodTitleSeed(text) {
-    const value = text.trim();
-    if (value.length < 2)
-        return false;
-    if (value.startsWith('/'))
-        return false;
-    if (value.startsWith('Conversation info'))
-        return false;
-    if (/^\[[A-Z][a-z]{2}\s+\d{4}-\d{2}-\d{2}/.test(value))
-        return false;
-    if (value.startsWith('你当前在 **WeCom'))
-        return false;
-    if (/^downloading\s+@/i.test(value))
-        return false;
-    if (/^added\s+\d+\s+packages?/i.test(value))
-        return false;
-    if (/^up to date,\s+audited/i.test(value))
-        return false;
-    if (/^npm\s+(warn|notice|error)\b/i.test(value))
-        return false;
-    if (/^sessions_spawn is available\b/i.test(value))
-        return false;
-    if (value === 'NO_REPLY')
-        return false;
-    return true;
-}
 function isRecord(value) {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -244,11 +186,5 @@ async function fileMtime(filePath) {
     catch {
         return new Date();
     }
-}
-function truncate(text, maxLen) {
-    const cleaned = text.replace(/\r?\n/g, ' ').trim();
-    if (cleaned.length <= maxLen)
-        return cleaned;
-    return cleaned.slice(0, maxLen) + '…';
 }
 //# sourceMappingURL=session-generation-scanner.js.map
