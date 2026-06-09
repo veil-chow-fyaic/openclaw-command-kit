@@ -326,6 +326,8 @@ function shouldShowInDefaultList(item) {
     if (item.isCurrent)
         return true;
     const title = normalizeForTitle(item.title);
+    if (/^gateway-fallback-/i.test(item.title))
+        return false;
     if (['网关历史会话', 'openclaw连通性检查', 'acp工具检查'].includes(title)) {
         return false;
     }
@@ -394,7 +396,7 @@ function normalizeWeakTitle(title) {
     const value = title.trim();
     if (value.startsWith('你当前在 **WeCom'))
         return '历史对话';
-    if (/^gateway-fallback-[0-9a-f-]{12,}$/i.test(value))
+    if (/^gateway-fallback-/i.test(value))
         return '网关历史会话';
     if (/^codex-openclaw/i.test(value))
         return 'OpenClaw 连通性检查';

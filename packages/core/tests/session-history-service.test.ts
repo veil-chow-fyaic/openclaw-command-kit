@@ -387,6 +387,77 @@ describe('SessionHistoryService', () => {
     expect(items[0].lastMessagePreview).toBe('已经把低信号标题过滤掉。');
   });
 
+  it('hides sessions that only contain background task and diagnostic noise', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({ sessions: [] });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:explicit:gateway-fallback-background': {
+          sessionId: 'background-only',
+          sessionFile: 'background-only.jsonl',
+          updatedAt: 7000,
+        },
+        'agent:main:acp-tool-token-check': {
+          sessionId: 'acp-only',
+          sessionFile: 'acp-only.jsonl',
+          updatedAt: 6000,
+        },
+        'agent:main:codex-openclaw-web-cbp-check': {
+          sessionId: 'web-check',
+          sessionFile: 'web-check.jsonl',
+          updatedAt: 5000,
+        },
+        'agent:main:explicit:human-session': {
+          sessionId: 'human',
+          sessionFile: 'human.jsonl',
+          updatedAt: 4000,
+        },
+      }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'background-only.jsonl'),
+      [
+        JSON.stringify({ message: { role: 'assistant', content: 'The background task is still in progress. I will continue to monitor it.' } }),
+        JSON.stringify({ message: { role: 'assistant', content: '还在跑，子代理正在终端里继续处理。' } }),
+      ].join('\n'),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'acp-only.jsonl'),
+      JSON.stringify({ message: { role: 'assistant', content: 'Yes, `acp_gateway_task` is available.' } }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'web-check.jsonl'),
+      JSON.stringify({ message: { role: 'assistant', content: '工具调用成功。 第一条结果标题：CBP Form 5106 - Create/Update Importer Identity Form' } }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'human.jsonl'),
+      [
+        JSON.stringify({ message: { role: 'user', content: '继续完善 session 列表体验' } }),
+        JSON.stringify({ message: { role: 'assistant', content: '已去掉内部诊断类标题。' } }),
+      ].join('\n'),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, route);
+
+    expect(items.map((item) => item.sessionId)).toEqual(['human']);
+
+    const allItems = await service.listSessions(actor, route, undefined, { mode: 'all' });
+    expect(allItems.map((item) => item.sessionId)).toEqual([
+      'background-only',
+      'acp-only',
+      'web-check',
+      'human',
+    ]);
+  });
+
   it('does not use a recent /sessions reply as the active preview', async () => {
     const gateway = new GatewayClient() as any;
     gateway.sessionsList.mockResolvedValue({

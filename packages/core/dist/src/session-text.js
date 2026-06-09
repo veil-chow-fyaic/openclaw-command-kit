@@ -98,7 +98,23 @@ function isGatewayOrRuntimeNoise(value) {
         return true;
     if (/^acp\s+gateway\b/i.test(value))
         return true;
+    if (/^yes,?\s+`?acp_gateway_task`?\s+is available\.?$/i.test(value))
+        return true;
+    if (/^`?acp_gateway_task`?\s+is available\.?$/i.test(value))
+        return true;
     if (/^sessions_spawn is available\b/i.test(value))
+        return true;
+    if (/^the background task is still (in progress|running)\b/i.test(value))
+        return true;
+    if (/^还在(跑|处理中|处理|运行)/.test(value))
+        return true;
+    if (/^后台任务(还在|正在|继续)/.test(value))
+        return true;
+    if (/^子代理正在/.test(value))
+        return true;
+    if (/^工具调用成功。?\s*第一条结果标题[:：]/.test(value))
+        return true;
+    if (/^拿到了。?\s*搜索到了\s+OpenClaw\s+官网/i.test(value))
         return true;
     if (/^tool call error:/i.test(value))
         return true;
