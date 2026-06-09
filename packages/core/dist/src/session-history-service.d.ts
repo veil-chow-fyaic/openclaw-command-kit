@@ -9,5 +9,6 @@ export declare class SessionHistoryService {
     private _enrichItemsFromLocalTranscripts;
     private _summarizeSessionFile;
     private _readLocalSessionStore;
+    private _hasLocalRouteEvidence;
 }
 //# sourceMappingURL=session-history-service.d.ts.map

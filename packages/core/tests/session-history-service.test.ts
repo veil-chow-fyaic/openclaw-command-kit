@@ -229,7 +229,7 @@ describe('SessionHistoryService', () => {
     expect(items[0].sessionFile).toBe('local-raw-key.jsonl');
   });
 
-  it('includes unscoped manual sessions only in direct chats', async () => {
+  it('excludes unscoped sessions without route metadata', async () => {
     const gateway = new GatewayClient() as any;
     gateway.sessionsList.mockResolvedValue({ sessions: [] });
     fs.writeFileSync(
@@ -252,22 +252,100 @@ describe('SessionHistoryService', () => {
 
     const service = new SessionHistoryService(gateway);
     const directItems = await service.listSessions(actor, route);
-    expect(directItems.map((item) => item.sessionId)).toEqual(['manual-session']);
-    expect(directItems[0].title).toBe('会议跟进');
-    expect(directItems[0].isCurrent).toBe(false);
+    expect(directItems).toHaveLength(0);
 
     const groupItems = await service.listSessions(actor, { ...route, chatType: 'group' });
     expect(groupItems).toHaveLength(0);
   });
 
-  it('prefers local store entries over gateway duplicates for manual sessions', async () => {
+  it('does not expose unscoped cron sessions across direct routes', async () => {
     const gateway = new GatewayClient() as any;
     gateway.sessionsList.mockResolvedValue({
       sessions: [
         {
-          key: 'agent:main:manual-session',
+          key: 'agent:main:wecom-default-弗忧联盟-rosetta(郭子滇)',
+          sessionId: 'rosetta-current',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: 'Rosetta(郭子滇)', to: 'Rosetta(郭子滇)' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Rosetta(郭子滇)' },
+          updatedAt: 8000,
+        },
+      ],
+    });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:wecom-default-弗忧联盟-rosetta(郭子滇)': {
+          sessionId: 'rosetta-current',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: 'Rosetta(郭子滇)', to: 'Rosetta(郭子滇)' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Rosetta(郭子滇)' },
+          sessionFile: 'rosetta-current.jsonl',
+          updatedAt: 8000,
+        },
+        'agent:main:cron:greeting-evening-1900': {
+          sessionId: 'tommy-greeting',
+          sessionFile: 'tommy-greeting.jsonl',
+          updatedAt: 9000,
+        },
+        'agent:main:cron:greeting-veil-1430': {
+          sessionId: 'veil-greeting',
+          sessionFile: 'veil-greeting.jsonl',
+          updatedAt: 7000,
+        },
+        'agent:main:explicit:tommy-rosetta-mention': {
+          sessionId: 'tommy-rosetta-mention',
+          sessionFile: 'tommy-rosetta-mention.jsonl',
+          updatedAt: 6500,
+        },
+      }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'tommy-greeting.jsonl'),
+      JSON.stringify({
+        timestamp: '2026-06-09T11:00:00.000Z',
+        message: { role: 'assistant', content: 'Tommy，晚上好。' },
+      }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'tommy-rosetta-mention.jsonl'),
+      [
+        JSON.stringify({
+          timestamp: '2026-06-09T10:59:00.000Z',
+          message: { role: 'user', content: '你当前在 **WeCom 单聊**（Tommy（曹旭升））里，请回复这个聊天。' },
+        }),
+        JSON.stringify({
+          timestamp: '2026-06-09T11:00:00.000Z',
+          message: { role: 'assistant', content: '后续可以让 Rosetta(郭子滇) 也看一下这个方案。' },
+        }),
+      ].join('\n'),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const rosettaRoute: RouteScope = {
+      ...route,
+      sessionKey: 'wecom-default-弗忧联盟-rosetta(郭子滇)',
+      label: 'Rosetta(郭子滇)',
+    };
+    const service = new SessionHistoryService(gateway);
+    const items = await service.listSessions(actor, rosettaRoute, undefined, { mode: 'all' });
+
+    expect(items.map((item) => item.sessionId)).toEqual(['rosetta-current']);
+  });
+
+  it('prefers local store entries over gateway duplicates when scoped', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        {
+          key: 'agent:main:wecom-default-弗忧联盟-周威',
           sessionId: 'manual-session',
-          origin: { provider: 'webchat' },
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: '周威', to: '周威' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: '周威' },
           updatedAt: 6000,
         },
       ],
@@ -275,8 +353,11 @@ describe('SessionHistoryService', () => {
     fs.writeFileSync(
       path.join(testSessionsDir, 'sessions.json'),
       JSON.stringify({
-        'agent:main:manual-session': {
+        'agent:main:wecom-default-弗忧联盟-周威': {
           sessionId: 'manual-session',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: '周威', to: '周威' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: '周威' },
           sessionFile: 'manual-session.jsonl',
           updatedAt: 6000,
         },
@@ -358,6 +439,10 @@ describe('SessionHistoryService', () => {
     fs.writeFileSync(
       path.join(testSessionsDir, 'fallback-session.jsonl'),
       [
+        JSON.stringify({
+          timestamp: '2026-06-08T09:58:00.000Z',
+          message: { role: 'user', content: '你当前在 **WeCom 单聊**（周威）里，请回复这个聊天。' },
+        }),
         JSON.stringify({
           timestamp: '2026-06-08T09:59:00.000Z',
           message: { role: 'assistant', content: 'ACP gateway progress fact: session list refreshed for route wecom-default-veil' },
@@ -469,6 +554,7 @@ describe('SessionHistoryService', () => {
     fs.writeFileSync(
       path.join(testSessionsDir, 'human.jsonl'),
       [
+        JSON.stringify({ message: { role: 'user', content: '你当前在 **WeCom 单聊**（周威）里，请回复这个聊天。' } }),
         JSON.stringify({ message: { role: 'user', content: '继续完善 session 列表体验' } }),
         JSON.stringify({ message: { role: 'assistant', content: '已去掉内部诊断类标题。' } }),
       ].join('\n'),
@@ -483,15 +569,8 @@ describe('SessionHistoryService', () => {
     expect(items[0].displayIndex).toBe(1);
 
     const allItems = await service.listSessions(actor, route, undefined, { mode: 'all' });
-    expect(allItems.map((item) => item.sessionId)).toEqual([
-      'background-only',
-      'acp-only',
-      'web-check',
-      'meeting-follow-up-abc',
-      'testing',
-      'human',
-    ]);
-    expect(allItems.find((item) => item.sessionId === 'human')?.displayIndex).toBe(6);
+    expect(allItems.map((item) => item.sessionId)).toEqual(['human']);
+    expect(allItems.find((item) => item.sessionId === 'human')?.displayIndex).toBe(1);
   });
 
   it('does not use a recent /sessions reply as the active preview', async () => {
@@ -576,6 +655,10 @@ describe('SessionHistoryService', () => {
       path.join(testSessionsDir, 'human-fallback.jsonl'),
       [
         JSON.stringify({
+          timestamp: '2026-06-08T09:59:00.000Z',
+          message: { role: 'user', content: '你当前在 **WeCom 单聊**（周威）里，请回复这个聊天。' },
+        }),
+        JSON.stringify({
           timestamp: '2026-06-08T10:00:00.000Z',
           message: { role: 'user', content: '继续排查 npm 分发后的 sessions 展示问题' },
         }),
@@ -595,13 +678,7 @@ describe('SessionHistoryService', () => {
     expect(items.find((item) => item.sessionId === 'human-fallback')?.title).toBe('继续排查 npm 分发后的 sessions 展示问题');
 
     const allItems = await service.listSessions(actor, route, undefined, { mode: 'all' });
-    expect(allItems.map((item) => item.sessionId)).toEqual([
-      'active',
-      'acp-check',
-      'openclaw-check',
-      'empty-fallback',
-      'human-fallback',
-    ]);
+    expect(allItems.map((item) => item.sessionId)).toEqual(['active', 'human-fallback']);
   });
 
   it('normalizes raw route-instruction titles from the session store', async () => {
@@ -646,16 +723,25 @@ describe('SessionHistoryService', () => {
         'agent:main:explicit:alpha': {
           sessionId: 'alpha',
           title: 'Alpha 调研',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: '周威', to: '周威' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: '周威' },
           updatedAt: 3000,
         },
         'agent:main:explicit:beta': {
           sessionId: 'beta',
           title: 'Beta 实现',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: '周威', to: '周威' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: '周威' },
           updatedAt: 2000,
         },
         'agent:main:explicit:gamma': {
           sessionId: 'gamma',
           title: 'Gamma 发布',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: '周威', to: '周威' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: '周威' },
           updatedAt: 1000,
         },
       }),

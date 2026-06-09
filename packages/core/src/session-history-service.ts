@@ -215,8 +215,11 @@ export class SessionHistoryService {
 
     const exactRouteMatch = sessionKey.toLowerCase() === route.sessionKey.toLowerCase();
     const sameDeliveryRoute = sessionMatchesRoute(raw, route, sessionKey);
-    const unscopedManual = !sameDeliveryRoute && sessionIsUnscopedManual(raw, route, sessionKey);
-    if (!sameDeliveryRoute && !unscopedManual) return null;
+    const hasLocalRouteEvidence =
+      !sameDeliveryRoute &&
+      sessionCanUseLocalRouteEvidence(raw, sessionKey) &&
+      this._hasLocalRouteEvidence(raw, route);
+    if (!sameDeliveryRoute && !hasLocalRouteEvidence) return null;
 
     const updatedAt = raw.updatedAt ? new Date(raw.updatedAt) : new Date();
     const rawTitle = raw.title || raw.displayName || origin.label || titleFromSessionKey(sessionKey);
@@ -338,6 +341,23 @@ export class SessionHistoryService {
 
     return sessions;
   }
+
+  private _hasLocalRouteEvidence(raw: RawSession, route: RouteScope): boolean {
+    if (!route.label) return false;
+    if (hasRouteInstructionText(raw.title || raw.displayName || '', route)) return true;
+
+    const sessionId = raw.sessionId;
+    if (!sessionId) return false;
+
+    const fileName = raw.sessionFile ? path.basename(raw.sessionFile) : `${sessionId}.jsonl`;
+    if (!fileName || fileName.includes('..')) return false;
+
+    const filePath = path.join(this.sessionsDir, fileName);
+    if (!fs.existsSync(filePath)) return false;
+
+    const prefix = readFilePrefix(filePath);
+    return hasRouteInstructionInPrefix(prefix, route);
+  }
 }
 
 interface SessionFileSummary {
@@ -421,9 +441,7 @@ function sessionMatchesRoute(raw: RawSession, route: RouteScope, sessionKey: str
   return candidates.some((value) => normalizeRouteTarget(value, route.provider) === routeTarget);
 }
 
-function sessionIsUnscopedManual(raw: RawSession, route: RouteScope, sessionKey: string): boolean {
-  if (route.chatType !== 'direct') return false;
-
+function sessionCanUseLocalRouteEvidence(raw: RawSession, sessionKey: string): boolean {
   const origin = raw.origin ?? {};
   const dc = raw.deliveryContext ?? {};
   if (origin.provider || origin.surface || dc.channel) return false;
@@ -434,6 +452,59 @@ function sessionIsUnscopedManual(raw: RawSession, route: RouteScope, sessionKey:
   if (!key || key === 'main' || key.startsWith('dashboard:')) return false;
 
   return true;
+}
+
+function hasRouteInstructionText(value: string, route: RouteScope): boolean {
+  const normalized = normalizeEvidenceText(value);
+  if (!normalized.includes('你当前在')) return false;
+  if (!normalized.includes(route.provider.toLowerCase())) return false;
+
+  const chatTypeLabel = routeChatTypeEvidenceLabel(route.chatType);
+  if (chatTypeLabel && !normalized.includes(chatTypeLabel)) return false;
+
+  const target = normalizeEvidenceText(route.label || '');
+  return !!target && normalized.includes(target);
+}
+
+function hasRouteInstructionInPrefix(prefix: string, route: RouteScope): boolean {
+  const lines = prefix.split(/\r?\n/).slice(0, 80);
+  for (const line of lines) {
+    if (!line.trim()) continue;
+
+    try {
+      const event = JSON.parse(line) as { message?: unknown };
+      const text = extractMessageText(event?.message);
+      if (hasRouteInstructionText(text, route)) return true;
+    } catch {
+      if (hasRouteInstructionText(line, route)) return true;
+    }
+  }
+  return false;
+}
+
+function routeChatTypeEvidenceLabel(chatType: RouteScope['chatType']): string {
+  if (chatType === 'direct') return '单聊';
+  if (chatType === 'group') return '群聊';
+  if (chatType === 'thread') return '话题';
+  return '';
+}
+
+function normalizeEvidenceText(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, '');
+}
+
+function readFilePrefix(filePath: string, maxBytes: number = 64 * 1024): string {
+  let fd: number | undefined;
+  try {
+    fd = fs.openSync(filePath, 'r');
+    const buffer = Buffer.alloc(maxBytes);
+    const bytesRead = fs.readSync(fd, buffer, 0, maxBytes, 0);
+    return buffer.toString('utf8', 0, bytesRead);
+  } catch {
+    return '';
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+  }
 }
 
 function titleFromSessionKey(sessionKey: string): string {
