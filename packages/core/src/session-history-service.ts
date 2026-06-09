@@ -184,6 +184,12 @@ export class SessionHistoryService {
         })
       : visible;
 
+    if (options.mode !== 'all' && !query) {
+      filtered.forEach((item, idx) => {
+        item.displayIndex = idx + 1;
+      });
+    }
+
     return filtered;
   }
 

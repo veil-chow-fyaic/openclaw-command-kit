@@ -107,6 +107,37 @@ describe('RestoreService', () => {
     expect(fs.renameSync).toHaveBeenCalled();
   });
 
+  it('prefers default visible indexes over all-mode indexes', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.chatHistory.mockResolvedValue({ sessionId: 'visible' });
+
+    const history = new SessionHistoryService(gateway) as any;
+    history.listSessions
+      .mockResolvedValueOnce([makeItem({ displayIndex: 2, sessionId: 'visible' })])
+      .mockResolvedValueOnce([
+        makeItem({ displayIndex: 2, sessionId: 'hidden' }),
+        makeItem({ displayIndex: 16, sessionId: 'visible' }),
+      ])
+      .mockResolvedValueOnce([
+        makeItem({ displayIndex: 2, sessionId: 'hidden' }),
+        makeItem({ displayIndex: 16, sessionId: 'visible' }),
+      ]);
+
+    (fs.existsSync as any).mockReturnValue(true);
+    (fs.readFileSync as any).mockReturnValue(JSON.stringify({
+      'agent:main:wecom-default-弗忧联盟-周威': { sessionId: 'old', sessionFile: '/tmp/old.jsonl' },
+    }));
+    (fs.copyFileSync as any).mockImplementation(() => {});
+    (fs.writeFileSync as any).mockImplementation(() => {});
+    (fs.renameSync as any).mockImplementation(() => {});
+
+    const service = new RestoreService(gateway, history, '/tmp/sessions');
+    const result = await service.restoreSession(actor, route, 2);
+
+    expect(result.success).toBe(true);
+    expect(result.restoredSessionId).toBe('visible');
+  });
+
   it('copies reset file to jsonl when restoring historical generation', async () => {
     const gateway = new GatewayClient() as any;
     gateway.chatHistory.mockResolvedValue({ sessionId: 'hist1' });

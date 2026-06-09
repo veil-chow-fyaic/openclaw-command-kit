@@ -480,6 +480,7 @@ describe('SessionHistoryService', () => {
     const items = await service.listSessions(actor, route);
 
     expect(items.map((item) => item.sessionId)).toEqual(['human']);
+    expect(items[0].displayIndex).toBe(1);
 
     const allItems = await service.listSessions(actor, route, undefined, { mode: 'all' });
     expect(allItems.map((item) => item.sessionId)).toEqual([
@@ -490,6 +491,7 @@ describe('SessionHistoryService', () => {
       'testing',
       'human',
     ]);
+    expect(allItems.find((item) => item.sessionId === 'human')?.displayIndex).toBe(6);
   });
 
   it('does not use a recent /sessions reply as the active preview', async () => {

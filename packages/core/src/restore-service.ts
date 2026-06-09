@@ -20,8 +20,10 @@ export class RestoreService {
     route: RouteScope,
     displayIndex: number
   ): Promise<RestoreResult> {
-    // 1. Recompute scoped list
-    const items = await this.history.listSessions(actor, route, undefined, { mode: 'all' });
+    // 1. Recompute the same default list users see in `/resume`.
+    const defaultItems = await this.history.listSessions(actor, route);
+    const allItems = await this.history.listSessions(actor, route, undefined, { mode: 'all' });
+    const items = defaultItems.length > 0 ? defaultItems : allItems;
     if (items.length === 0) {
       return {
         success: false,
@@ -30,8 +32,12 @@ export class RestoreService {
       };
     }
 
-    // 2. Map displayIndex -> item
-    const item = items.find((i) => i.displayIndex === displayIndex);
+    // 2. Map displayIndex -> item. Prefer the default visible list so `/resume 2`
+    // matches what users just saw. Fall back to `/resume all` indexes for
+    // diagnostic or hidden candidates.
+    const item =
+      defaultItems.find((i) => i.displayIndex === displayIndex) ??
+      allItems.find((i) => i.displayIndex === displayIndex);
     if (!item) {
       return {
         success: false,
