@@ -100,6 +100,14 @@ function isGatewayOrRuntimeNoise(value) {
         return true;
     if (/^yes,?\s+`?acp_gateway_task`?\s+is available\.?$/i.test(value))
         return true;
+    if (/^no\.?\s+the\s+`?acp-gateway-client`?\s+skill\s+is\s+avai/i.test(value))
+        return true;
+    if (/^no,?\s+`?acp_gateway_task`?\s+is\s+not\s+explicitly/i.test(value))
+        return true;
+    if (/^internal check:\s*reply only whether\s+acp_gateway/i.test(value))
+        return true;
+    if (/^not available\.\s+the\s+`?acp_gateway_task`?\b/i.test(value))
+        return true;
     if (/^`?acp_gateway_task`?\s+is available\.?$/i.test(value))
         return true;
     if (/^sessions_spawn is available\b/i.test(value))
@@ -115,6 +123,16 @@ function isGatewayOrRuntimeNoise(value) {
     if (/^工具调用成功。?\s*第一条结果标题[:：]/.test(value))
         return true;
     if (/^拿到了。?\s*搜索到了\s+OpenClaw\s+官网/i.test(value))
+        return true;
+    if (/^你刚刚被唤醒。有一份新的会议纪要已生成\/更新/.test(value))
+        return true;
+    if (/^📋?\s*Obsidian中沉淀一份新的会议纪要/.test(value))
+        return true;
+    if (/^\[SILENT\]\s*这是一条测试消息/.test(value))
+        return true;
+    if (/^testing$/i.test(value))
+        return true;
+    if (/^【我是爱兮】/.test(value))
         return true;
     if (/^tool call error:/i.test(value))
         return true;

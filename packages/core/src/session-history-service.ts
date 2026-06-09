@@ -390,7 +390,8 @@ function shouldShowInDefaultList(item: ResumeListItem): boolean {
 
   const title = normalizeForTitle(item.title);
   if (/^gateway-fallback-/i.test(item.title)) return false;
-  if (['网关历史会话', 'openclaw连通性检查', 'acp工具检查'].includes(title)) {
+  if (/^meeting-follow-up-/i.test(item.sessionId)) return false;
+  if (['网关历史会话', 'openclaw连通性检查', 'acp工具检查', 'testing'].includes(title)) {
     return false;
   }
 

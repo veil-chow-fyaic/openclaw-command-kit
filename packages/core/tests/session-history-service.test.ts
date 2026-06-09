@@ -408,6 +408,16 @@ describe('SessionHistoryService', () => {
           sessionFile: 'web-check.jsonl',
           updatedAt: 5000,
         },
+        'agent:main:explicit:meeting-follow-up-abc': {
+          sessionId: 'meeting-follow-up-abc',
+          sessionFile: 'meeting-follow-up-abc.jsonl',
+          updatedAt: 4500,
+        },
+        'agent:main:explicit:testing': {
+          sessionId: 'testing',
+          sessionFile: 'testing.jsonl',
+          updatedAt: 4300,
+        },
         'agent:main:explicit:human-session': {
           sessionId: 'human',
           sessionFile: 'human.jsonl',
@@ -426,12 +436,34 @@ describe('SessionHistoryService', () => {
     );
     fs.writeFileSync(
       path.join(testSessionsDir, 'acp-only.jsonl'),
-      JSON.stringify({ message: { role: 'assistant', content: 'Yes, `acp_gateway_task` is available.' } }),
+      [
+        JSON.stringify({ message: { role: 'assistant', content: 'Yes, `acp_gateway_task` is available.' } }),
+        JSON.stringify({ message: { role: 'assistant', content: 'No. The `acp-gateway-client` skill is available, not acp_gateway_task.' } }),
+        JSON.stringify({ message: { role: 'user', content: 'Internal check: reply only whether acp_gateway_task is available.' } }),
+        JSON.stringify({ message: { role: 'assistant', content: 'Not available. The `acp_gateway_task` tool is not listed.' } }),
+      ].join('\n'),
       'utf-8'
     );
     fs.writeFileSync(
       path.join(testSessionsDir, 'web-check.jsonl'),
       JSON.stringify({ message: { role: 'assistant', content: '工具调用成功。 第一条结果标题：CBP Form 5106 - Create/Update Importer Identity Form' } }),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'meeting-follow-up-abc.jsonl'),
+      [
+        JSON.stringify({ message: { role: 'user', content: '你刚刚被唤醒。有一份新的会议纪要已生成/更新，需要你作为 Rosetta 的 AI 助手处理。' } }),
+        JSON.stringify({ message: { role: 'assistant', content: '📋 Obsidian中沉淀一份新的会议纪要。' } }),
+        JSON.stringify({ message: { role: 'assistant', content: '[SILENT] 这是一条测试消息，仅用于验证投递链路。' } }),
+      ].join('\n'),
+      'utf-8'
+    );
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'testing.jsonl'),
+      [
+        JSON.stringify({ message: { role: 'user', content: 'testing' } }),
+        JSON.stringify({ message: { role: 'assistant', content: '【我是爱兮】💙 AIC 的部门组长，为弗忧联盟团队服务。' } }),
+      ].join('\n'),
       'utf-8'
     );
     fs.writeFileSync(
@@ -454,6 +486,8 @@ describe('SessionHistoryService', () => {
       'background-only',
       'acp-only',
       'web-check',
+      'meeting-follow-up-abc',
+      'testing',
       'human',
     ]);
   });
