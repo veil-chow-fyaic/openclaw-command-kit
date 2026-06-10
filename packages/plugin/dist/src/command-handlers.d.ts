@@ -13,6 +13,7 @@ export declare class SessionCommandHandlers {
         mode?: 'default' | 'all';
     }): Promise<PluginCommandResult>;
     handleResumeHelp(): PluginCommandResult;
+    handleResumeDebug(ctx: PluginCommandContext): Promise<PluginCommandResult>;
     handleSessionsNumeric(index: number): PluginCommandResult;
     handleResumeUsage(): PluginCommandResult;
     handleResumeByIndex(ctx: PluginCommandContext, index: number): Promise<PluginCommandResult>;

@@ -5,6 +5,7 @@ import {
   SessionHistoryService,
   RestoreService,
   formatResumeHelp,
+  formatResumeDebug,
   formatError,
 } from '@fyaic/core';
 import type { PluginCommandContext } from 'openclaw/plugin-sdk/plugins/types';
@@ -55,12 +56,12 @@ function mockItem(index: number, overrides: Partial<any> = {}) {
 
 describe('SessionCommandHandlers', () => {
   let handlers: SessionCommandHandlers;
-  let mockHistory: { listSessions: ReturnType<typeof vi.fn> };
+  let mockHistory: { listSessions: ReturnType<typeof vi.fn>; inspectSessions: ReturnType<typeof vi.fn> };
   let mockRestore: { restoreSession: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockHistory = { listSessions: vi.fn() };
+    mockHistory = { listSessions: vi.fn(), inspectSessions: vi.fn() };
     mockRestore = { restoreSession: vi.fn() };
     handlers = new SessionCommandHandlers(
       undefined,
@@ -143,6 +144,34 @@ describe('SessionCommandHandlers', () => {
         { mode: 'all' }
       );
       expect(result.text).toContain('可恢复的历史对话');
+    });
+
+    it('returns route diagnostics without listing hidden session content', async () => {
+      vi.mocked(deriveScopes).mockResolvedValue(mockScopes());
+      const diagnostics = {
+        route: mockScopes().route,
+        mode: 'default' as const,
+        rawCount: 3,
+        trustedRawCount: 1,
+        historicalCount: 0,
+        allCount: 1,
+        visibleCount: 1,
+        currentCount: 1,
+        hidden: [{ reason: 'route_mismatch_untrusted' as const, count: 2 }],
+        trust: [{ source: 'metadata' as const, count: 1 }],
+        warnings: [],
+      };
+      mockHistory.inspectSessions.mockResolvedValue({
+        items: [mockItem(1, { isCurrent: true })],
+        diagnostics,
+      });
+
+      const result = await handlers.handleResumeDebug(mockCtx());
+
+      expect(mockHistory.inspectSessions).toHaveBeenCalledWith(mockScopes().actor, mockScopes().route);
+      expect(result.text).toBe(formatResumeDebug(diagnostics));
+      expect(result.text).toContain('过滤原因');
+      expect(result.text).not.toContain('Tommy');
     });
   });
 

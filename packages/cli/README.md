@@ -7,7 +7,7 @@ CLI companion for OpenClaw Command Kit.
 ```bash
 npm install -g openclaw-slash-kit
 # or
-npx openclaw-slash-kit <command>
+npx -y openclaw-slash-kit <command>
 ```
 
 ## Commands
@@ -17,7 +17,7 @@ npx openclaw-slash-kit <command>
 One-command setup on a new device:
 
 - Verifies `openclaw` is installed
-- Installs the Command Kit plugin (`@openclaw-commands/openclaw-command-kit`) via `openclaw plugins install` when available on npm
+- Installs the Command Kit plugin (`@fyaic/openclaw-command-kit`) via `openclaw plugins install` when available on npm
 - Falls back to a source symlink when the npm package is not yet published
 - Updates `~/.openclaw/openclaw.json`
 - Restarts the OpenClaw gateway
@@ -29,7 +29,7 @@ Runs the guarded release script from the repo root:
 - Validates git status
 - Runs tests and build
 - Bumps versions in both workspace packages
-- Publishes `@openclaw-commands/core` and `@openclaw-commands/openclaw-command-kit`
+- Publishes `@fyaic/core` and `@fyaic/openclaw-command-kit`
 - Tags and pushes to trigger CI
 
 This command must be run from the `openclaw-command-kit` repository root.

@@ -1,24 +1,24 @@
-# @openclaw-commands/core
+# @fyaic/core
 
 Core library for OpenClaw session commands.
 
 ## Features
 
-- **SessionHistoryService** – list active and historical sessions from gateway + local transcript backups.
+- **SessionHistoryService** – list and inspect active/historical sessions from gateway + local transcript backups.
 - **RestoreService** – resume a session by switching `sessions.json` to a historical generation.
-- **ResponseFormatter** – format `/sessions` and `/resume` output for chat channels.
+- **ResponseFormatter** – format `/sessions`, `/resume`, and `/resume debug` output for chat channels.
 - **CommandRouter** – wire commands to handlers.
 
 ## Install
 
 ```bash
-npm install @openclaw-commands/core
+npm install @fyaic/core
 ```
 
 ## Usage
 
 ```typescript
-import { SessionHistoryService, RestoreService } from '@openclaw-commands/core';
+import { SessionHistoryService, RestoreService } from '@fyaic/core';
 ```
 
 ## License

@@ -61,12 +61,14 @@ export function formatResumeHelp() {
         '/resume 序号 - 继续对应历史对话',
         '/resume 关键词 - 搜索历史对话',
         '/resume all - 查看完整候选列表',
+        '/resume debug - 查看当前聊天的恢复诊断',
         '/resume help - 查看本帮助',
         '',
         '/sessions 是查看历史的别名：',
         '/sessions - 等同 /resume',
         '/sessions 关键词 - 等同 /resume 关键词',
         '/sessions all - 等同 /resume all',
+        '/sessions debug - 等同 /resume debug',
         '',
         '注意：恢复对话只使用 /resume 序号。/sessions 只用于查看和搜索。',
     ].join('\n');
@@ -75,7 +77,54 @@ export function formatSessionsRestoreBoundary(index) {
     return `/sessions 只用于查看和搜索。要继续第 ${index} 个对话，请发送 /resume ${index}。`;
 }
 export function formatResumeUsage() {
-    return '用法：/resume、/resume 序号、/resume 关键词、/resume all、/resume help';
+    return '用法：/resume、/resume 序号、/resume 关键词、/resume all、/resume debug、/resume help';
+}
+export function formatResumeDebug(diagnostics) {
+    const route = diagnostics.route;
+    const lines = [
+        '恢复诊断',
+        '',
+        `频道：${route.provider}`,
+        `会话：${route.sessionKey}`,
+        `类型：${route.chatType}`,
+    ];
+    if (route.accountId)
+        lines.push(`账号：${route.accountId}`);
+    if (route.organization)
+        lines.push(`组织：${route.organization}`);
+    if (route.label)
+        lines.push(`标签：${route.label}`);
+    lines.push('');
+    lines.push(`原始候选：${diagnostics.rawCount}`);
+    lines.push(`可信路由候选：${diagnostics.trustedRawCount}`);
+    lines.push(`历史扫描补充：${diagnostics.historicalCount}`);
+    lines.push(`完整可恢复：${diagnostics.allCount}`);
+    lines.push(`当前显示：${diagnostics.visibleCount}`);
+    lines.push(`当前标记：${diagnostics.currentCount}`);
+    if (diagnostics.trust.length > 0) {
+        lines.push('');
+        lines.push('可信来源：');
+        for (const item of diagnostics.trust) {
+            lines.push(`- ${formatTrustSource(item.source)}：${item.count}`);
+        }
+    }
+    if (diagnostics.hidden.length > 0) {
+        lines.push('');
+        lines.push('过滤原因：');
+        for (const item of diagnostics.hidden) {
+            lines.push(`- ${formatHiddenReason(item.reason)}：${item.count}`);
+        }
+    }
+    if (diagnostics.warnings.length > 0) {
+        lines.push('');
+        lines.push('警告：');
+        for (const warning of diagnostics.warnings) {
+            lines.push(`- ${warning}`);
+        }
+    }
+    lines.push('');
+    lines.push('说明：debug 只展示统计，不展示被过滤会话内容。');
+    return lines.join('\n');
 }
 export function formatError(error, params) {
     switch (error) {
@@ -131,5 +180,47 @@ function hasNonSequentialIndexes(items) {
     if (items[0].displayIndex !== 1)
         return true;
     return items.some((item, idx) => idx > 0 && item.displayIndex !== items[idx - 1].displayIndex + 1);
+}
+function formatTrustSource(source) {
+    switch (source) {
+        case 'metadata':
+            return 'OpenClaw 路由元数据';
+        case 'local_route_instruction':
+            return '本地路由指令';
+        case 'historical_scan':
+            return '历史扫描';
+        default:
+            return source;
+    }
+}
+function formatHiddenReason(reason) {
+    switch (reason) {
+        case 'actor_missing':
+            return '缺少用户身份';
+        case 'actor_account_mismatch':
+            return '用户账号与聊天账号不一致';
+        case 'actor_organization_mismatch':
+            return '用户组织与聊天组织不一致';
+        case 'missing_session_id':
+            return '缺少 sessionId';
+        case 'missing_session_key':
+            return '缺少 sessionKey';
+        case 'provider_mismatch':
+            return '频道不一致';
+        case 'account_mismatch':
+            return '账号不一致';
+        case 'organization_mismatch':
+            return '组织不一致';
+        case 'chat_type_mismatch':
+            return '聊天类型不一致';
+        case 'route_mismatch_untrusted':
+            return '缺少可信路由证据';
+        case 'low_signal_default':
+            return '默认视图隐藏低信号会话';
+        case 'query_filtered':
+            return '关键词过滤未命中';
+        default:
+            return reason;
+    }
 }
 //# sourceMappingURL=response-formatter.js.map

@@ -1,6 +1,6 @@
 # Command Catalog
 
-## Available Commands (MVP)
+## Available Commands
 
 These commands are implemented and ready to use.
 
@@ -9,6 +9,7 @@ These commands are implemented and ready to use.
 ### `/sessions`
 
 **Purpose:** List current and historical conversations for the current chat route.
+Alias of `/resume`.
 
 **Scope:** Read-only. Never modifies session state.
 
@@ -16,6 +17,8 @@ These commands are implemented and ready to use.
 
 ```text
 /sessions
+/sessions all
+/sessions debug
 ```
 
 **Example Response:**
@@ -45,9 +48,10 @@ These commands are implemented and ready to use.
 
 **Constraints:**
 
-- Only shows sessions belonging to the exact current route (`provider + accountId + organization + chatType + sessionKey`).
+- Only shows sessions belonging to the current trusted route (`provider + accountId + organization + chatType + route identity`).
 - Never falls back to global search.
 - Hides raw `sessionId` values; only display indexes are shown.
+- `/sessions debug` is the same as `/resume debug` and only shows counts/reasons, not hidden session content.
 
 **Error Responses:**
 
@@ -61,7 +65,7 @@ These commands are implemented and ready to use.
 
 ### `/resume`
 
-**Purpose:** Show the session list (same as `/sessions`) with a stronger hint to use `/resume N`.
+**Purpose:** Primary resume command. Show the default scoped list with a hint to use `/resume N`.
 
 **Scope:** Read-only.
 
@@ -69,6 +73,10 @@ These commands are implemented and ready to use.
 
 ```text
 /resume
+/resume all
+/resume <query>
+/resume help
+/resume debug
 ```
 
 **What it does:**
@@ -83,6 +91,16 @@ Identical to `/sessions`, but the final line emphasizes how to switch:
 
 - `/sessions` answers "what can I resume?"
 - `/resume` answers "how do I resume?"
+- `/sessions` remains as a compatibility alias for users who think in "history list" terms.
+
+**Additional modes:**
+
+| Mode | Behavior |
+|------|----------|
+| `/resume all` | Shows the full scoped list, including low-signal historical entries. |
+| `/resume <query>` | Filters the scoped list by title, preview, last user message, or last assistant message. |
+| `/resume help` | Shows command usage and the `/sessions` alias boundary. |
+| `/resume debug` | Shows route-scoped diagnostics, trust sources, and hidden counts without exposing hidden session content. |
 
 ---
 
@@ -142,10 +160,6 @@ OpenClaw：收到，测试正常
 
 ---
 
-## Planned Commands (Phase 2+)
-
-These are not yet implemented.
-
 ### `/sessions <query>`
 
 Filter the scoped list by title, summary, preview, or time.
@@ -158,17 +172,34 @@ Filter the scoped list by title, summary, preview, or time.
 
 ### `/resume <query>`
 
-Resolve a query to one scoped conversation.
+Filter the scoped list by title, summary, preview, or time.
 
 ```text
 /resume 腾讯文档
 ```
 
-Rules:
-
-- If exactly one strong match exists, switch directly or ask for confirmation.
-- If multiple matches exist, show a numbered list.
+- Query mode is read-only; it does not switch directly.
+- Use the returned display index with `/resume N`.
 - If no match exists, report failure without mutating state.
+
+### `/whereami`
+
+Operator diagnostic command showing:
+
+- channel
+- account
+- organization
+- chat type
+- route key
+- current session id
+
+This is intended for setup and support, not as a normal end-user workflow.
+
+---
+
+## Planned Commands (Phase 2+)
+
+These are not yet implemented.
 
 ### `/fork`
 
@@ -183,21 +214,6 @@ Rename the current session title/label.
 ### `/pin` and `/archive`
 
 Session organization commands. Deferred until OpenClaw has native metadata support.
-
-### `/whereami`
-
-Operator diagnostic command showing:
-
-- channel
-- account
-- organization
-- chat type
-- route key
-- current session id
-
-Not shown as a normal-user feature.
-
----
 
 ## Naming Rationale
 

@@ -1,6 +1,6 @@
 # Publish Script
 
-One-click safe release for the `@openclaw-commands/*` workspace.
+One-click safe release for the OpenClaw Command Kit workspace.
 
 ## Prerequisites
 
@@ -31,11 +31,12 @@ Interactive flow:
 3. Runs `npm run test:run`
 4. Runs `npm run build`
 5. Prompts for bump type: `patch | minor | major`
-6. Bumps version in both `packages/core/package.json` and `packages/plugin/package.json`
+6. Bumps versions in `packages/core`, `packages/plugin`, and `packages/cli`
 7. Commits version bump
-8. Publishes `@openclaw-commands/core` to npm
-9. Publishes `@openclaw-commands/openclaw-command-kit` to npm
-10. Tags (`vX.Y.Z`) and pushes tag to trigger CI
+8. Publishes `@fyaic/core` to npm
+9. Publishes `@fyaic/openclaw-command-kit` to npm
+10. Publishes `openclaw-slash-kit` to npm
+11. Tags (`vX.Y.Z`) and pushes tag to trigger CI
 
 ## Safety Features
 

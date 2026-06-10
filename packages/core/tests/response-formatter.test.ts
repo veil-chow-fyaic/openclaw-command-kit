@@ -5,6 +5,7 @@ import {
   formatResumeHint,
   formatResumeHelp,
   formatResumeUsage,
+  formatResumeDebug,
   formatSessionsRestoreBoundary,
   formatError,
 } from '../src/response-formatter.js';
@@ -131,7 +132,9 @@ describe('resume command helper text', () => {
     expect(text).toContain('/resume 序号');
     expect(text).toContain('/resume 关键词');
     expect(text).toContain('/resume all');
+    expect(text).toContain('/resume debug');
     expect(text).toContain('/sessions 是查看历史的别名');
+    expect(text).toContain('/sessions debug');
     expect(text).toContain('/sessions 只用于查看和搜索');
   });
 
@@ -141,6 +144,44 @@ describe('resume command helper text', () => {
 
   it('formats compact resume usage', () => {
     expect(formatResumeUsage()).toContain('/resume help');
+  });
+});
+
+describe('formatResumeDebug', () => {
+  it('formats diagnostic counts without hidden session content', () => {
+    const text = formatResumeDebug({
+      route: {
+        provider: 'wecom',
+        sessionKey: 'wecom-default-org-rosetta',
+        chatType: 'direct',
+        accountId: 'default',
+        organization: 'org',
+        label: 'Rosetta',
+      },
+      mode: 'default',
+      rawCount: 7,
+      trustedRawCount: 1,
+      historicalCount: 1,
+      allCount: 2,
+      visibleCount: 1,
+      currentCount: 1,
+      hidden: [
+        { reason: 'route_mismatch_untrusted', count: 4 },
+        { reason: 'low_signal_default', count: 1 },
+      ],
+      trust: [
+        { source: 'metadata', count: 1 },
+        { source: 'historical_scan', count: 1 },
+      ],
+      warnings: [],
+    });
+
+    expect(text).toContain('恢复诊断');
+    expect(text).toContain('原始候选：7');
+    expect(text).toContain('缺少可信路由证据：4');
+    expect(text).toContain('OpenClaw 路由元数据：1');
+    expect(text).toContain('debug 只展示统计');
+    expect(text).not.toContain('Tommy');
   });
 });
 

@@ -1,6 +1,6 @@
 // Parse /sessions, /resume, /resume N; route to services.
 // TODO(Phase 2/3): Wire up to SessionHistoryService and RestoreService.
-import { formatSessionList, formatResumeSuccess, formatResumeHint, formatResumeHelp, formatResumeUsage, formatSessionsRestoreBoundary, formatError, } from './response-formatter.js';
+import { formatSessionList, formatResumeSuccess, formatResumeHint, formatResumeHelp, formatResumeUsage, formatResumeDebug, formatSessionsRestoreBoundary, formatError, } from './response-formatter.js';
 export class CommandRouter {
     history;
     restore;
@@ -18,6 +18,11 @@ export class CommandRouter {
         const args = (commandMatch[2] ?? '').trim();
         if (args.toLowerCase() === 'help') {
             await adapter.deliverReply(route, formatResumeHelp());
+            return { handled: true };
+        }
+        if (args.toLowerCase() === 'debug') {
+            const inspection = await this.history.inspectSessions(actor, route);
+            await adapter.deliverReply(route, formatResumeDebug(inspection.diagnostics));
             return { handled: true };
         }
         const numericArg = args.match(/^\d+$/);

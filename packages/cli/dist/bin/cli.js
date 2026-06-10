@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // openclaw-slash-kit CLI
 // Usage:
-//   npx openclaw-slash-kit install
-//   npx openclaw-slash-kit publish [patch|minor|major]
+//   npx -y openclaw-slash-kit install
+//   npx -y openclaw-slash-kit publish [patch|minor|major]
 import { installCommand } from '../commands/install.js';
 import { publishCommand } from '../commands/publish.js';
 const args = process.argv.slice(2);

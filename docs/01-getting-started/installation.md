@@ -61,19 +61,28 @@ ln -s $(pwd)/packages/plugin ~/.openclaw/extensions/openclaw-command-kit
 Best for production deployments.
 
 ```bash
-openclaw plugins install @openclaw-commands/openclaw-command-kit
+npx -y openclaw-slash-kit install
+```
+
+The installer verifies OpenClaw, installs or updates `@fyaic/openclaw-command-kit`,
+updates `~/.openclaw/openclaw.json`, and restarts the gateway.
+
+Manual install is still possible:
+
+```bash
+openclaw plugins install @fyaic/openclaw-command-kit
 ```
 
 Or install manually via npm and link:
 
 ```bash
-npm install -g @openclaw-commands/openclaw-command-kit
+npm install -g @fyaic/openclaw-command-kit
 
 # Get the global install path
 npm root -g
 
 # Then symlink into OpenClaw extensions
-ln -s $(npm root -g)/@openclaw-commands/openclaw-command-kit \
+ln -s $(npm root -g)/@fyaic/openclaw-command-kit \
   ~/.openclaw/extensions/openclaw-command-kit
 ```
 
@@ -168,8 +177,9 @@ Wait 5–10 seconds for the gateway to fully initialize.
 Send these commands in any OpenClaw channel:
 
 1. `/sessions` — should list current + historical sessions.
-2. `/resume` — should show the same list with usage hints.
-3. `/resume 1` — should switch to the first historical session (if any exist).
+2. `/resume all` — should show the full scoped list.
+3. `/resume debug` — should show route-scoped counts without hidden content.
+4. `/resume 1` — should switch to the first historical session (if any exist).
 
 If any command is not recognized, check:
 
@@ -194,8 +204,7 @@ launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway
 ### Upgrade from npm
 
 ```bash
-npm update -g @openclaw-commands/openclaw-command-kit
-launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway
+npx -y openclaw-slash-kit install
 ```
 
 > **Always restart the gateway after upgrading.** The running process holds compiled JavaScript in memory; file changes alone do not take effect until restart.
@@ -216,7 +225,7 @@ launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway
 ### Uninstall npm Install
 
 ```bash
-npm uninstall -g @openclaw-commands/openclaw-command-kit
+npm uninstall -g @fyaic/openclaw-command-kit
 # Remove from openclaw.json
 # Restart gateway
 launchctl kickstart -k gui/$(id -u)/ai.openclaw.gateway

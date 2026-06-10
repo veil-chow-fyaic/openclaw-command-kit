@@ -7,6 +7,7 @@ import type { ActorScope, RouteScope, SessionCommandAdapter, ResumeListItem } fr
 vi.mock('../src/session-history-service.js', () => ({
   SessionHistoryService: vi.fn().mockImplementation(() => ({
     listSessions: vi.fn(),
+    inspectSessions: vi.fn(),
   })),
 }));
 
@@ -105,6 +106,38 @@ describe('CommandRouter', () => {
     const result = await router.handle('/resume all', actor, route, adapter);
     expect(result.handled).toBe(true);
     expect(history.listSessions).toHaveBeenCalledWith(actor, route, undefined, { mode: 'all' });
+  });
+
+  it('handles /resume debug through diagnostics', async () => {
+    const history = new SessionHistoryService({} as any) as any;
+    history.inspectSessions.mockResolvedValue({
+      items: [],
+      diagnostics: {
+        route,
+        mode: 'default',
+        rawCount: 3,
+        trustedRawCount: 1,
+        historicalCount: 0,
+        allCount: 1,
+        visibleCount: 1,
+        currentCount: 1,
+        hidden: [{ reason: 'route_mismatch_untrusted', count: 2 }],
+        trust: [{ source: 'metadata', count: 1 }],
+        warnings: [],
+      },
+    });
+
+    const restore = new RestoreService({} as any, history) as any;
+    const router = new CommandRouter(history, restore);
+
+    const result = await router.handle('/resume debug', actor, route, adapter);
+    expect(result.handled).toBe(true);
+    expect(history.inspectSessions).toHaveBeenCalledWith(actor, route);
+    expect(history.listSessions).not.toHaveBeenCalled();
+    expect(restore.restoreSession).not.toHaveBeenCalled();
+    const replyText = (adapter.deliverReply as any).mock.calls[0][1];
+    expect(replyText).toContain('恢复诊断');
+    expect(replyText).toContain('缺少可信路由证据：2');
   });
 
   it('handles /resume N', async () => {

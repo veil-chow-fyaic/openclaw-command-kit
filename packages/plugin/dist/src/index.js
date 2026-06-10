@@ -7,7 +7,7 @@ import { SessionCommandHandlers } from './command-handlers.js';
 const plugin = {
     id: 'openclaw-command-kit',
     name: 'OpenClaw Command Kit',
-    description: 'Native session commands: /resume, /resume N, /resume <query>, /resume all, /resume help, /sessions alias, /whereami',
+    description: 'Native session commands: /resume, /resume N, /resume <query>, /resume all, /resume debug, /resume help, /sessions alias, /whereami',
     configSchema: emptyPluginConfigSchema(),
     register(api) {
         const handlers = new SessionCommandHandlers();
@@ -21,6 +21,9 @@ const plugin = {
                 const lower = args.toLowerCase();
                 if (lower === 'help') {
                     return handlers.handleResumeHelp();
+                }
+                if (lower === 'debug') {
+                    return handlers.handleResumeDebug(ctx);
                 }
                 if (/^\d+$/.test(args)) {
                     const index = parseInt(args, 10);
@@ -55,6 +58,9 @@ const plugin = {
                 }
                 if (lower === 'help') {
                     return handlers.handleResumeHelp();
+                }
+                if (lower === 'debug') {
+                    return handlers.handleResumeDebug(ctx);
                 }
                 if (lower === 'all') {
                     return handlers.handleResumeList(ctx, undefined, { mode: 'all' });

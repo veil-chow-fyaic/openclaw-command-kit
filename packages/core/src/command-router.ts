@@ -15,6 +15,7 @@ import {
   formatResumeHint,
   formatResumeHelp,
   formatResumeUsage,
+  formatResumeDebug,
   formatSessionsRestoreBoundary,
   formatError,
 } from './response-formatter.js';
@@ -49,6 +50,12 @@ export class CommandRouter {
 
     if (args.toLowerCase() === 'help') {
       await adapter.deliverReply(route, formatResumeHelp());
+      return { handled: true };
+    }
+
+    if (args.toLowerCase() === 'debug') {
+      const inspection = await this.history.inspectSessions(actor, route);
+      await adapter.deliverReply(route, formatResumeDebug(inspection.diagnostics));
       return { handled: true };
     }
 

@@ -1,5 +1,5 @@
 // Command handlers for /sessions, /resume, /resume N.
-import { GatewayClient, SessionHistoryService, RestoreService, formatSessionList, formatResumeSuccess, formatResumeHint, formatResumeHelp, formatResumeUsage, formatSessionsRestoreBoundary, formatError, } from '@fyaic/core';
+import { GatewayClient, SessionHistoryService, RestoreService, formatSessionList, formatResumeSuccess, formatResumeHint, formatResumeHelp, formatResumeUsage, formatResumeDebug, formatSessionsRestoreBoundary, formatError, } from '@fyaic/core';
 import { deriveScopes } from './scope-deriver.js';
 function isSuccess(result) {
     return 'actor' in result && 'route' in result;
@@ -50,6 +50,14 @@ export class SessionCommandHandlers {
     }
     handleResumeHelp() {
         return { text: formatResumeHelp() };
+    }
+    async handleResumeDebug(ctx) {
+        const result = await deriveScopes(ctx, this.gateway);
+        if (!isSuccess(result)) {
+            return { text: formatError(result.reason) };
+        }
+        const inspection = await this.history.inspectSessions(result.actor, result.route);
+        return { text: formatResumeDebug(inspection.diagnostics) };
     }
     handleSessionsNumeric(index) {
         return { text: formatSessionsRestoreBoundary(index) };

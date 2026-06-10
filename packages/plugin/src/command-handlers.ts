@@ -9,6 +9,7 @@ import {
   formatResumeHint,
   formatResumeHelp,
   formatResumeUsage,
+  formatResumeDebug,
   formatSessionsRestoreBoundary,
   formatError,
 } from '@fyaic/core';
@@ -85,6 +86,16 @@ export class SessionCommandHandlers {
 
   handleResumeHelp(): PluginCommandResult {
     return { text: formatResumeHelp() };
+  }
+
+  async handleResumeDebug(ctx: PluginCommandContext): Promise<PluginCommandResult> {
+    const result = await deriveScopes(ctx, this.gateway);
+    if (!isSuccess(result)) {
+      return { text: formatError(result.reason) };
+    }
+
+    const inspection = await this.history.inspectSessions(result.actor, result.route);
+    return { text: formatResumeDebug(inspection.diagnostics) };
   }
 
   handleSessionsNumeric(index: number): PluginCommandResult {

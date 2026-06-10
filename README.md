@@ -21,8 +21,15 @@ OpenClaw chat commands for session history and resume.
 | Command | Description | Example |
 |---------|-------------|---------|
 | `/sessions` | List current and historical sessions for the current chat route. | `/sessions` |
-| `/resume` | Show the session list with usage hints. | `/resume` |
+| `/sessions all` | Show the full scoped list, including low-signal historical entries. | `/sessions all` |
+| `/sessions debug` | Alias of `/resume debug`. | `/sessions debug` |
+| `/resume` | Primary resume command. Shows the same default list as `/sessions`. | `/resume` |
 | `/resume N` | Switch to the N-th session in the list. | `/resume 2` |
+| `/resume <query>` | Filter the scoped list by title or preview text. | `/resume 腾讯文档` |
+| `/resume all` | Show the full scoped list without switching. | `/resume all` |
+| `/resume help` | Show usage and boundary notes. | `/resume help` |
+| `/resume debug` | Show route-scoped diagnostics without exposing filtered session content. | `/resume debug` |
+| `/whereami` | Operator diagnostics for the current command context. | `/whereami` |
 
 **Example `/sessions` output:**
 
@@ -57,10 +64,10 @@ OpenClaw：收到，测试正常
 
 ## Quick Start
 
-### One-line install (after npm package is published)
+### One-line install
 
 ```bash
-npx openclaw-slash-kit install
+npx -y openclaw-slash-kit install
 ```
 
 This verifies OpenClaw, installs the plugin, updates `~/.openclaw/openclaw.json`,
@@ -175,7 +182,7 @@ npm run build
 npm run test:run
 
 # Type check without emitting
-npm run lint
+npm run check
 ```
 
 ## Release

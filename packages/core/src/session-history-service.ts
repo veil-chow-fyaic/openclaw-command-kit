@@ -5,7 +5,17 @@ import * as path from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import type { GatewayClient } from './gateway-client.js';
-import type { ActorScope, RouteScope, ResumeListItem, SessionListOptions } from './types.js';
+import type {
+  ActorScope,
+  RouteScope,
+  ResumeListItem,
+  SessionHiddenReason,
+  SessionListDiagnostics,
+  SessionListInspection,
+  SessionListOptions,
+  SessionTrustSource,
+  SessionTrustSummary,
+} from './types.js';
 import { scanGenerations } from './session-generation-scanner.js';
 import {
   cleanTranscriptText,
@@ -55,10 +65,31 @@ export class SessionHistoryService {
     query?: string,
     options: SessionListOptions = {}
   ): Promise<ResumeListItem[]> {
+    const inspection = await this.inspectSessions(actor, route, query, options);
+    return inspection.items;
+  }
+
+  async inspectSessions(
+    actor: ActorScope,
+    route: RouteScope,
+    query?: string,
+    options: SessionListOptions = {}
+  ): Promise<SessionListInspection> {
+    const diagnostics = createDiagnostics(route, query, options);
+
     // Fail-closed: actor must be valid and consistent with route
-    if (!actor.senderId) return [];
-    if (actor.accountId && route.accountId && actor.accountId !== route.accountId) return [];
-    if (actor.organization && route.organization && actor.organization !== route.organization) return [];
+    if (!actor.senderId) {
+      addHidden(diagnostics, 'actor_missing');
+      return { items: [], diagnostics };
+    }
+    if (actor.accountId && route.accountId && actor.accountId !== route.accountId) {
+      addHidden(diagnostics, 'actor_account_mismatch');
+      return { items: [], diagnostics };
+    }
+    if (actor.organization && route.organization && actor.organization !== route.organization) {
+      addHidden(diagnostics, 'actor_organization_mismatch');
+      return { items: [], diagnostics };
+    }
 
     const result = await this.gateway.sessionsList({
       agentId: 'main',
@@ -69,10 +100,18 @@ export class SessionHistoryService {
       (result as any).sessions ?? [],
       this._readLocalSessionStore()
     );
+    diagnostics.rawCount = rawSessions.length;
 
-    const activeItems = rawSessions
-      .map((s) => this._toItem(s, route))
-      .filter((item): item is ResumeListItem => item !== null);
+    const activeItems: ResumeListItem[] = [];
+    for (const raw of rawSessions) {
+      const classified = this._classifyRawSession(raw, route);
+      if ('item' in classified) {
+        activeItems.push(classified.item);
+      } else {
+        addHidden(diagnostics, classified.reason);
+      }
+    }
+    diagnostics.trustedRawCount = activeItems.length;
 
     await this._enrichItemsFromLocalTranscripts(activeItems, route);
 
@@ -148,12 +187,15 @@ export class SessionHistoryService {
             isCurrent: false,
             isRestorable: gen.isRestorable,
             sessionFile: gen.sessionFile,
+            trustSource: 'historical_scan',
           });
         }
       } catch {
         // Fail-open on scanner errors: still return active sessions
+        diagnostics.warnings.push('本地历史扫描失败，仅显示当前 session store 中可信的会话。');
       }
     }
+    diagnostics.historicalCount = historicalItems.length;
 
     // Merge active + historical, sort by updatedAt desc
     const merged = [...activeItems, ...historicalItems];
@@ -167,6 +209,13 @@ export class SessionHistoryService {
     merged.forEach((item, idx) => {
       item.displayIndex = idx + 1;
     });
+    diagnostics.allCount = merged.length;
+    diagnostics.currentCount = merged.filter((item) => item.isCurrent).length;
+    diagnostics.trust = summarizeTrust(merged);
+
+    for (const item of merged) {
+      if (!shouldShowInDefaultList(item)) addHidden(diagnostics, 'low_signal_default');
+    }
 
     const visible = options.mode === 'all' ? merged : merged.filter(shouldShowInDefaultList);
 
@@ -184,33 +233,44 @@ export class SessionHistoryService {
         })
       : visible;
 
+    if (query) {
+      const filteredCount = visible.length - filtered.length;
+      if (filteredCount > 0) addHidden(diagnostics, 'query_filtered', filteredCount);
+    }
+
     if (options.mode !== 'all' && !query) {
       filtered.forEach((item, idx) => {
         item.displayIndex = idx + 1;
       });
     }
 
-    return filtered;
+    diagnostics.visibleCount = filtered.length;
+    diagnostics.hidden.sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));
+
+    return { items: filtered, diagnostics };
   }
 
-  private _toItem(raw: RawSession, route: RouteScope): ResumeListItem | null {
+  private _classifyRawSession(
+    raw: RawSession,
+    route: RouteScope
+  ): { item: ResumeListItem } | { reason: SessionHiddenReason } {
     const sessionId = raw.sessionId;
-    if (!sessionId) return null;
+    if (!sessionId) return { reason: 'missing_session_id' };
 
     const rawKey = raw.key ?? raw.sessionKey ?? '';
     const sessionKey = extractSessionKey(rawKey);
-    if (!sessionKey) return null;
+    if (!sessionKey) return { reason: 'missing_session_key' };
 
     // Scope matching
     const origin = raw.origin ?? {};
-    if (origin.provider && origin.provider.toLowerCase() !== route.provider) return null;
-    if (route.accountId && origin.accountId && origin.accountId !== route.accountId) return null;
-    if (route.organization && origin.organization && origin.organization !== route.organization) return null;
+    if (origin.provider && origin.provider.toLowerCase() !== route.provider) return { reason: 'provider_mismatch' };
+    if (route.accountId && origin.accountId && origin.accountId !== route.accountId) return { reason: 'account_mismatch' };
+    if (route.organization && origin.organization && origin.organization !== route.organization) return { reason: 'organization_mismatch' };
 
     // Chat type matching (accept if either side is unknown or missing)
     const rawChatType = normalizeChatType(raw.chatType || raw.kind || origin.chatType || '');
     if (rawChatType !== 'unknown' && route.chatType !== 'unknown') {
-      if (rawChatType !== route.chatType) return null;
+      if (rawChatType !== route.chatType) return { reason: 'chat_type_mismatch' };
     }
 
     const exactRouteMatch = sessionKey.toLowerCase() === route.sessionKey.toLowerCase();
@@ -219,21 +279,24 @@ export class SessionHistoryService {
       !sameDeliveryRoute &&
       sessionCanUseLocalRouteEvidence(raw, sessionKey) &&
       this._hasLocalRouteEvidence(raw, route);
-    if (!sameDeliveryRoute && !hasLocalRouteEvidence) return null;
+    if (!sameDeliveryRoute && !hasLocalRouteEvidence) return { reason: 'route_mismatch_untrusted' };
 
     const updatedAt = raw.updatedAt ? new Date(raw.updatedAt) : new Date();
     const rawTitle = raw.title || raw.displayName || origin.label || titleFromSessionKey(sessionKey);
     const title = normalizeWeakTitle(rawTitle);
 
     return {
-      displayIndex: 0, // assigned later
-      sessionId,
-      title,
-      updatedAt,
-      lastMessagePreview: '', // TODO: enrich from chat.history in Phase 2+
-      isCurrent: exactRouteMatch,
-      isRestorable: true,
-      sessionFile: raw.sessionFile ? path.basename(raw.sessionFile) : undefined,
+      item: {
+        displayIndex: 0, // assigned later
+        sessionId,
+        title,
+        updatedAt,
+        lastMessagePreview: '', // TODO: enrich from chat.history in Phase 2+
+        isCurrent: exactRouteMatch,
+        isRestorable: true,
+        sessionFile: raw.sessionFile ? path.basename(raw.sessionFile) : undefined,
+        trustSource: sameDeliveryRoute ? 'metadata' : 'local_route_instruction',
+      },
     };
   }
 
@@ -365,6 +428,52 @@ interface SessionFileSummary {
   lastMessagePreview: string;
   lastUserMessage?: string;
   lastAssistantMessage?: string;
+}
+
+function createDiagnostics(
+  route: RouteScope,
+  query: string | undefined,
+  options: SessionListOptions
+): SessionListDiagnostics {
+  return {
+    route,
+    mode: options.mode === 'all' ? 'all' : 'default',
+    query,
+    rawCount: 0,
+    trustedRawCount: 0,
+    historicalCount: 0,
+    allCount: 0,
+    visibleCount: 0,
+    currentCount: 0,
+    hidden: [],
+    trust: [],
+    warnings: [],
+  };
+}
+
+function addHidden(
+  diagnostics: SessionListDiagnostics,
+  reason: SessionHiddenReason,
+  count: number = 1
+): void {
+  const existing = diagnostics.hidden.find((item) => item.reason === reason);
+  if (existing) {
+    existing.count += count;
+    return;
+  }
+  diagnostics.hidden.push({ reason, count });
+}
+
+function summarizeTrust(items: ResumeListItem[]): SessionTrustSummary[] {
+  const counts = new Map<SessionTrustSource, number>();
+  for (const item of items) {
+    const source = item.trustSource;
+    if (!source) continue;
+    counts.set(source, (counts.get(source) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source));
 }
 
 function mergeRawSessions(primary: RawSession[], secondary: RawSession[]): RawSession[] {

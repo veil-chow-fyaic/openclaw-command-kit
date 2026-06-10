@@ -5,11 +5,17 @@
 `/resume` lets a user restore a previous conversation for the current chat
 route.
 
-MVP commands:
+Implemented commands:
 
 ```text
 /sessions
+/sessions all
+/sessions debug
 /resume
+/resume all
+/resume <query>
+/resume help
+/resume debug
 /resume 2
 ```
 
@@ -35,7 +41,8 @@ MVP commands:
 
 ## Scope Inputs
 
-`/sessions`, `/resume`, and `/resume N` require:
+`/sessions`, `/resume`, `/resume all`, `/resume <query>`, `/resume debug`, and
+`/resume N` require:
 
 - trusted actor identity, such as `SenderId`;
 - provider/channel;
@@ -81,7 +88,7 @@ Formatting constraints:
 
 ## `/resume`
 
-Without arguments, same output as `/sessions` plus stronger instruction:
+Without arguments, same default output as `/sessions` plus stronger instruction:
 
 ```text
 发送 /resume 2 切换到第 2 个历史对话。
@@ -93,6 +100,37 @@ accidental control from normal chat messages.
 In a group chat, the list is visible to the channel. Keep it compact and avoid
 debug identifiers. Selection still requires an explicit `/resume N` command from
 an authorized actor.
+
+## `/resume all`
+
+Read-only. Shows the full scoped list, including low-signal historical entries
+that the default list hides for readability. Display indexes remain stable
+between the default list, `all`, and query mode.
+
+## `/resume <query>`
+
+Read-only. Filters scoped sessions only. Query mode may match:
+
+- exact or partial title/preview text;
+- last user message;
+- last assistant message;
+- derived title.
+
+Do not use LLM semantic search for authorization. Search is ranking/filtering
+only after exact route scope is already enforced.
+
+## `/resume debug`
+
+Read-only. Shows diagnostic counts for the current route:
+
+- raw session count;
+- trusted raw session count;
+- historical scan count;
+- visible/current counts;
+- trust-source summary;
+- hidden-reason summary.
+
+It must not show titles, previews, sender names, or content from hidden sessions.
 
 ## `/resume N`
 
@@ -145,26 +183,6 @@ Read-back failure:
 OpenClaw 未确认切换完成，后续消息不会被标记为已切换。
 ```
 
-## Query Mode
-
-Phase 2 only:
-
-```text
-/resume 腾讯文档
-/resume 昨天
-```
-
-Query mode must filter scoped sessions only. It may rank by:
-
-- exact title/preview match;
-- recent time;
-- last user message;
-- last assistant message;
-- derived title.
-
-Do not use LLM semantic search for authorization. Semantic search is ranking
-only after exact route scope is already enforced.
-
 ## Acceptance Tests
 
 - `/sessions` in one direct chat never lists another direct chat.
@@ -173,6 +191,9 @@ only after exact route scope is already enforced.
 - Two actors with similar display names do not see each other's direct-chat
   sessions.
 - `/resume 2` switches to the selected generation.
+- `/resume all` shows additional low-signal scoped entries without renumbering unsafe hidden entries.
+- `/resume <query>` filters scoped sessions only and does not switch directly.
+- `/resume debug` reports counts and hidden reasons without leaking hidden content.
 - Bare `2` after `/resume` does not switch in MVP.
 - After `/resume 2`, the next user message can reference the selected history.
 - `/new` after `/resume 2` creates a fresh generation for the same route.

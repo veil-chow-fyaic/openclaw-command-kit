@@ -13,21 +13,41 @@ export class SessionHistoryService {
         this.sessionsDir = sessionsDir;
     }
     async listSessions(actor, route, query, options = {}) {
+        const inspection = await this.inspectSessions(actor, route, query, options);
+        return inspection.items;
+    }
+    async inspectSessions(actor, route, query, options = {}) {
+        const diagnostics = createDiagnostics(route, query, options);
         // Fail-closed: actor must be valid and consistent with route
-        if (!actor.senderId)
-            return [];
-        if (actor.accountId && route.accountId && actor.accountId !== route.accountId)
-            return [];
-        if (actor.organization && route.organization && actor.organization !== route.organization)
-            return [];
+        if (!actor.senderId) {
+            addHidden(diagnostics, 'actor_missing');
+            return { items: [], diagnostics };
+        }
+        if (actor.accountId && route.accountId && actor.accountId !== route.accountId) {
+            addHidden(diagnostics, 'actor_account_mismatch');
+            return { items: [], diagnostics };
+        }
+        if (actor.organization && route.organization && actor.organization !== route.organization) {
+            addHidden(diagnostics, 'actor_organization_mismatch');
+            return { items: [], diagnostics };
+        }
         const result = await this.gateway.sessionsList({
             agentId: 'main',
             limit: 500,
         });
         const rawSessions = mergeRawSessions(result.sessions ?? [], this._readLocalSessionStore());
-        const activeItems = rawSessions
-            .map((s) => this._toItem(s, route))
-            .filter((item) => item !== null);
+        diagnostics.rawCount = rawSessions.length;
+        const activeItems = [];
+        for (const raw of rawSessions) {
+            const classified = this._classifyRawSession(raw, route);
+            if ('item' in classified) {
+                activeItems.push(classified.item);
+            }
+            else {
+                addHidden(diagnostics, classified.reason);
+            }
+        }
+        diagnostics.trustedRawCount = activeItems.length;
         await this._enrichItemsFromLocalTranscripts(activeItems, route);
         // Enrich active session preview from chat.history
         const currentRouteItems = activeItems.filter((item) => item.isCurrent);
@@ -104,13 +124,16 @@ export class SessionHistoryService {
                         isCurrent: false,
                         isRestorable: gen.isRestorable,
                         sessionFile: gen.sessionFile,
+                        trustSource: 'historical_scan',
                     });
                 }
             }
             catch {
                 // Fail-open on scanner errors: still return active sessions
+                diagnostics.warnings.push('本地历史扫描失败，仅显示当前 session store 中可信的会话。');
             }
         }
+        diagnostics.historicalCount = historicalItems.length;
         // Merge active + historical, sort by updatedAt desc
         const merged = [...activeItems, ...historicalItems];
         merged.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
@@ -122,6 +145,13 @@ export class SessionHistoryService {
         merged.forEach((item, idx) => {
             item.displayIndex = idx + 1;
         });
+        diagnostics.allCount = merged.length;
+        diagnostics.currentCount = merged.filter((item) => item.isCurrent).length;
+        diagnostics.trust = summarizeTrust(merged);
+        for (const item of merged) {
+            if (!shouldShowInDefaultList(item))
+                addHidden(diagnostics, 'low_signal_default');
+        }
         const visible = options.mode === 'all' ? merged : merged.filter(shouldShowInDefaultList);
         // Apply query filter if provided. Keep displayIndex stable so numbers shown
         // by `/sessions <query>` can still be used directly with `/resume N`.
@@ -134,34 +164,41 @@ export class SessionHistoryService {
                     false);
             })
             : visible;
+        if (query) {
+            const filteredCount = visible.length - filtered.length;
+            if (filteredCount > 0)
+                addHidden(diagnostics, 'query_filtered', filteredCount);
+        }
         if (options.mode !== 'all' && !query) {
             filtered.forEach((item, idx) => {
                 item.displayIndex = idx + 1;
             });
         }
-        return filtered;
+        diagnostics.visibleCount = filtered.length;
+        diagnostics.hidden.sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));
+        return { items: filtered, diagnostics };
     }
-    _toItem(raw, route) {
+    _classifyRawSession(raw, route) {
         const sessionId = raw.sessionId;
         if (!sessionId)
-            return null;
+            return { reason: 'missing_session_id' };
         const rawKey = raw.key ?? raw.sessionKey ?? '';
         const sessionKey = extractSessionKey(rawKey);
         if (!sessionKey)
-            return null;
+            return { reason: 'missing_session_key' };
         // Scope matching
         const origin = raw.origin ?? {};
         if (origin.provider && origin.provider.toLowerCase() !== route.provider)
-            return null;
+            return { reason: 'provider_mismatch' };
         if (route.accountId && origin.accountId && origin.accountId !== route.accountId)
-            return null;
+            return { reason: 'account_mismatch' };
         if (route.organization && origin.organization && origin.organization !== route.organization)
-            return null;
+            return { reason: 'organization_mismatch' };
         // Chat type matching (accept if either side is unknown or missing)
         const rawChatType = normalizeChatType(raw.chatType || raw.kind || origin.chatType || '');
         if (rawChatType !== 'unknown' && route.chatType !== 'unknown') {
             if (rawChatType !== route.chatType)
-                return null;
+                return { reason: 'chat_type_mismatch' };
         }
         const exactRouteMatch = sessionKey.toLowerCase() === route.sessionKey.toLowerCase();
         const sameDeliveryRoute = sessionMatchesRoute(raw, route, sessionKey);
@@ -169,19 +206,22 @@ export class SessionHistoryService {
             sessionCanUseLocalRouteEvidence(raw, sessionKey) &&
             this._hasLocalRouteEvidence(raw, route);
         if (!sameDeliveryRoute && !hasLocalRouteEvidence)
-            return null;
+            return { reason: 'route_mismatch_untrusted' };
         const updatedAt = raw.updatedAt ? new Date(raw.updatedAt) : new Date();
         const rawTitle = raw.title || raw.displayName || origin.label || titleFromSessionKey(sessionKey);
         const title = normalizeWeakTitle(rawTitle);
         return {
-            displayIndex: 0, // assigned later
-            sessionId,
-            title,
-            updatedAt,
-            lastMessagePreview: '', // TODO: enrich from chat.history in Phase 2+
-            isCurrent: exactRouteMatch,
-            isRestorable: true,
-            sessionFile: raw.sessionFile ? path.basename(raw.sessionFile) : undefined,
+            item: {
+                displayIndex: 0, // assigned later
+                sessionId,
+                title,
+                updatedAt,
+                lastMessagePreview: '', // TODO: enrich from chat.history in Phase 2+
+                isCurrent: exactRouteMatch,
+                isRestorable: true,
+                sessionFile: raw.sessionFile ? path.basename(raw.sessionFile) : undefined,
+                trustSource: sameDeliveryRoute ? 'metadata' : 'local_route_instruction',
+            },
         };
     }
     async _enrichItemsFromLocalTranscripts(items, route) {
@@ -302,6 +342,42 @@ export class SessionHistoryService {
         const prefix = readFilePrefix(filePath);
         return hasRouteInstructionInPrefix(prefix, route);
     }
+}
+function createDiagnostics(route, query, options) {
+    return {
+        route,
+        mode: options.mode === 'all' ? 'all' : 'default',
+        query,
+        rawCount: 0,
+        trustedRawCount: 0,
+        historicalCount: 0,
+        allCount: 0,
+        visibleCount: 0,
+        currentCount: 0,
+        hidden: [],
+        trust: [],
+        warnings: [],
+    };
+}
+function addHidden(diagnostics, reason, count = 1) {
+    const existing = diagnostics.hidden.find((item) => item.reason === reason);
+    if (existing) {
+        existing.count += count;
+        return;
+    }
+    diagnostics.hidden.push({ reason, count });
+}
+function summarizeTrust(items) {
+    const counts = new Map();
+    for (const item of items) {
+        const source = item.trustSource;
+        if (!source)
+            continue;
+        counts.set(source, (counts.get(source) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+        .map(([source, count]) => ({ source, count }))
+        .sort((a, b) => b.count - a.count || a.source.localeCompare(b.source));
 }
 function mergeRawSessions(primary, secondary) {
     const bySessionId = new Map();

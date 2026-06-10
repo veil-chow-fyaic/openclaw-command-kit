@@ -336,6 +336,57 @@ describe('SessionHistoryService', () => {
     expect(items.map((item) => item.sessionId)).toEqual(['rosetta-current']);
   });
 
+  it('reports route isolation diagnostics without exposing hidden content', async () => {
+    const gateway = new GatewayClient() as any;
+    gateway.sessionsList.mockResolvedValue({
+      sessions: [
+        {
+          key: 'agent:main:wecom-default-弗忧联盟-rosetta(郭子滇)',
+          sessionId: 'rosetta-current',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: 'Rosetta(郭子滇)', to: 'Rosetta(郭子滇)' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Rosetta(郭子滇)' },
+          updatedAt: 8000,
+        },
+        {
+          key: 'agent:main:wecom-default-弗忧联盟-tommy（曹旭升）',
+          sessionId: 'tommy-current',
+          chatType: 'direct',
+          origin: { provider: 'wecom', accountId: 'default', organization: '弗忧联盟', label: 'Tommy（曹旭升）', to: 'Tommy（曹旭升）' },
+          deliveryContext: { channel: 'wecom', accountId: 'default', to: 'Tommy（曹旭升）' },
+          updatedAt: 9000,
+        },
+      ],
+    });
+    fs.writeFileSync(
+      path.join(testSessionsDir, 'sessions.json'),
+      JSON.stringify({
+        'agent:main:cron:greeting-evening-1900': {
+          sessionId: 'tommy-greeting',
+          sessionFile: 'tommy-greeting.jsonl',
+          updatedAt: 9500,
+        },
+      }),
+      'utf-8'
+    );
+    vi.mocked(scanGenerations).mockResolvedValue([]);
+
+    const rosettaRoute: RouteScope = {
+      ...route,
+      sessionKey: 'wecom-default-弗忧联盟-rosetta(郭子滇)',
+      label: 'Rosetta(郭子滇)',
+    };
+    const service = new SessionHistoryService(gateway);
+    const inspection = await service.inspectSessions(actor, rosettaRoute, undefined, { mode: 'all' });
+
+    expect(inspection.items.map((item) => item.sessionId)).toEqual(['rosetta-current']);
+    expect(inspection.diagnostics.rawCount).toBe(3);
+    expect(inspection.diagnostics.trustedRawCount).toBe(1);
+    expect(inspection.diagnostics.trust).toEqual([{ source: 'metadata', count: 1 }]);
+    expect(inspection.diagnostics.hidden).toEqual([{ reason: 'route_mismatch_untrusted', count: 2 }]);
+    expect(JSON.stringify(inspection.diagnostics)).not.toContain('曹旭升');
+  });
+
   it('prefers local store entries over gateway duplicates when scoped', async () => {
     const gateway = new GatewayClient() as any;
     gateway.sessionsList.mockResolvedValue({

@@ -14,6 +14,7 @@ vi.mock('../src/command-handlers.js', () => ({
     handleResumeList: vi.fn().mockResolvedValue({ text: 'resume query list' }),
     handleResumeByIndex: vi.fn().mockResolvedValue({ text: 'resumed' }),
     handleResumeHelp: vi.fn().mockReturnValue({ text: 'resume help' }),
+    handleResumeDebug: vi.fn().mockResolvedValue({ text: 'resume debug' }),
     handleResumeUsage: vi.fn().mockReturnValue({ text: '用法：resume usage' }),
     handleSessionsNumeric: vi.fn().mockReturnValue({ text: 'sessions numeric boundary' }),
     handleWhereami: vi.fn().mockResolvedValue({ text: 'whereami' }),
@@ -88,6 +89,7 @@ describe('plugin definition', () => {
     const handler = sessionsCall![0].handler;
 
     expect(await handler({ args: 'help' } as any)).toEqual({ text: 'resume help' });
+    expect(await handler({ args: 'debug' } as any)).toEqual({ text: 'resume debug' });
     expect(await handler({ args: '2' } as any)).toEqual({ text: 'sessions numeric boundary' });
     expect(await handler({ args: '0' } as any)).toEqual({ text: '用法：resume usage' });
   });
@@ -158,6 +160,19 @@ describe('plugin definition', () => {
     const result = await handler({ args: 'all' } as any);
 
     expect(result.text).toBe('resume query list');
+  });
+
+  it('resume handler with debug delegates to handleResumeDebug', async () => {
+    const api = createMockApi();
+    plugin.register(api as any);
+
+    const resumeCall = api.registerCommand.mock.calls.find(
+      (c: any) => c[0].name === 'resume'
+    );
+    const handler = resumeCall![0].handler;
+    const result = await handler({ args: 'debug' } as any);
+
+    expect(result.text).toBe('resume debug');
   });
 
   it('resume handler with query delegates to handleResumeList', async () => {

@@ -4,13 +4,18 @@ Get OpenClaw Command Kit running in under 5 minutes.
 
 ## What You Get
 
-Three native chat commands for OpenClaw:
+Native chat commands for OpenClaw:
 
 | Command | What it does |
 |---------|--------------|
-| `/sessions` | Lists current + historical conversations for this chat route. |
-| `/resume` | Same list as `/sessions`, with a stronger hint to use `/resume N`. |
+| `/sessions` | Lists current + historical conversations for this chat route. Alias of `/resume`. |
+| `/sessions all` | Shows the full scoped list, including low-signal historical entries. |
+| `/resume` | Primary resume command. Shows the same default list as `/sessions`. |
 | `/resume N` | Switches to the N-th conversation in the list. |
+| `/resume <query>` | Filters the scoped list by title or preview text. |
+| `/resume all` | Shows the full scoped list without switching. |
+| `/resume help` | Shows usage and boundary notes. |
+| `/resume debug` | Shows route-scoped diagnostics without exposing filtered session content. |
 
 ## Prerequisites
 
@@ -21,19 +26,25 @@ Three native chat commands for OpenClaw:
 ## One-Line Install
 
 ```bash
-# Clone and build
+npx -y openclaw-slash-kit install
+```
+
+The installer verifies OpenClaw, installs or updates the plugin, updates
+`~/.openclaw/openclaw.json`, and restarts the gateway.
+
+## Source Install
+
+Use this only when developing the plugin itself:
+
+```bash
 git clone <repo-url> openclaw-command-kit
 cd openclaw-command-kit
 npm install
 npm run build
-
-# Symlink plugin into OpenClaw extensions
 ln -s $(pwd)/packages/plugin ~/.openclaw/extensions/openclaw-command-kit
 ```
 
-## Configure OpenClaw
-
-Add to `~/.openclaw/openclaw.json`:
+Then add to `~/.openclaw/openclaw.json`:
 
 ```json
 {
@@ -112,6 +123,7 @@ OpenClaw：收到，测试正常
 |---------|-----|
 | `/sessions` returns nothing | Check that the chat route has prior conversations; verify `openclaw.json` plugin config. |
 | `/sessions` says "没有可恢复的历史对话" | This is normal for a brand-new route with no history. |
+| Only one or two sessions appear | Run `/resume all`, then `/resume debug`; the default list intentionally hides low-signal entries. |
 | Command not recognized | Gateway not restarted after install. Run the `launchctl` restart command above. |
 | Old code still running after rebuild | Gateway caches compiled JS in memory. Always restart after `npm run build`. |
 
