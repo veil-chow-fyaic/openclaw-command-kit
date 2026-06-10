@@ -1,7 +1,14 @@
 # Agent Task Brief: OpenClaw Native Session Commands
 
 Date: 2026-05-23
-Last updated: 2026-05-25
+Last updated: 2026-06-09
+
+> Current handoff note: read
+> [Human Takeover Brief - 2026-06-09](human-takeover-brief-2026-06-09.md)
+> before using this document for new work. This brief remains the original
+> architecture and safety handoff, but it does not by itself reflect the later
+> npm packages, implemented query/diagnostic commands, stale website lane, or
+> current human acceptance gaps.
 
 This is the primary handoff document for implementation agents. The linked
 documents below provide detail and prior evidence, but this brief is the
