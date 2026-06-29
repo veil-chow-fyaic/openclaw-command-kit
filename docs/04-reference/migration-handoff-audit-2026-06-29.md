@@ -60,8 +60,8 @@ package release.
 | Path | Role | Git state | Handoff action |
 |---|---|---|---|
 | `/Users/fuyo-aic/Projects/openclaw-command-kit` | Canonical product repo | Clean, synced to `origin/main` | Transfer as primary repo. |
-| `/Users/fuyo-aic/Projects/openclaw-session-bridge` | Prior Side Panel bridge and gateway adapter evidence | Main clean; dirty diff preserved on local archive branch | Push/archive branch after GitHub auth is restored. |
-| `/Users/fuyo-aic/Projects/openclaw-wecom-org-scope` | WeCom organization-scope design docs | Local git repo, clean root commit, no remote | Transfer directory or add remote after privacy review. |
+| `/Users/fuyo-aic/Projects/openclaw-session-bridge` | Prior Side Panel bridge and gateway adapter evidence | Main clean; dirty diff preserved and pushed on archive branch | Transfer archive branch as evidence. |
+| `/Users/fuyo-aic/Projects/openclaw-wecom-org-scope` | WeCom organization-scope design docs | Clean private GitHub repo | Transfer repo as design archive. |
 | `/Users/fuyo-aic/Projects/mac-openclaw-bootstrap` | macOS OpenClaw install/bootstrap support | Clean, synced | Transfer as related installer/bootstrap repo. |
 | `/Users/fuyo-aic/Projects/openclaw-client-host` | Windows/client-host related OpenClaw work | Clean, synced | Transfer only if client-host scope is included. |
 | `/Users/fuyo-aic/Projects/openclaw-ops-docs` | OpenClaw operations docs | Clean, synced | Transfer as ops context. |
@@ -87,6 +87,7 @@ Sync: behind 0 / ahead 0
 Main status after archival step: clean
 Archive branch: archive/command-kit-handoff-20260629
 Archive commit: 14a0c28 archive: preserve command kit bridge handoff diff
+Archive remote: https://github.com/fyaic/bondie-openclaw-session-bridge/tree/archive/command-kit-handoff-20260629
 ```
 
 Archived diff intent:
@@ -105,10 +106,8 @@ legacy-origin/main aaad93c
 origin is 10 commits ahead of legacy-origin
 ```
 
-Handoff requirement: push `archive/command-kit-handoff-20260629` after GitHub
-authentication is restored, or bundle the branch before deleting the working
-tree. Do not assume this archive branch is product-approved; it preserves
-handoff evidence.
+Handoff requirement: do not assume this archive branch is product-approved; it
+preserves handoff evidence. Review before merging or deleting.
 
 ### `openclaw-deep-research`
 
@@ -306,7 +305,7 @@ initialized as a local git repo:
 ```text
 Branch: main
 Commit: 8762a92 docs: archive wecom organization scope design
-Remote: none
+Remote: https://github.com/fyaic/openclaw-wecom-org-scope.git
 Status: clean
 ```
 
@@ -335,19 +334,20 @@ personnel information.
 
 - `/Users/fuyo-aic/Projects/openclaw-command-kit`
 - `/Users/fuyo-aic/Projects/openclaw-session-bridge` archive branch
-  `archive/command-kit-handoff-20260629`
+  `archive/command-kit-handoff-20260629` on `fyaic/bondie-openclaw-session-bridge`
 - `/Users/fuyo-aic/code/git-branch-archives/openclaw-command-kit/20260609-150527-keep-main`
 - `/Users/fuyo-aic/code/liev-symphony-archives/openclaw-command-kit`
 - `/Users/fuyo-aic/Projects/openclaw-wecom-org-scope`
 
 ### P1 - Resolve Before New Work
 
-- Push or bundle the `openclaw-session-bridge` archive branch after GitHub auth
-  is restored.
+- Review the `openclaw-session-bridge` archive branch before merging or
+  deleting.
 - Decide whether the stale Liev runtime should be stopped after handoff
   evidence is captured.
 - Decide whether local OpenClaw config should be repaired or explicitly ignored.
-- Decide whether `openclaw-wecom-org-scope` should get a remote repo.
+- Decide whether `openclaw-wecom-org-scope` should stay private or become
+  public/internal.
 
 ### P2 - Broader OpenClaw Migration Items
 
@@ -384,9 +384,9 @@ The canonical Command Kit repo is clean and safely pushed. The package release
 chain is intact. The main risks for migration are not in the canonical repo;
 they are in adjacent evidence and runtime directories:
 
-- local-only `openclaw-session-bridge` archive branch not yet pushed;
+- `openclaw-session-bridge` archive branch that is preserved but not reviewed;
 - stale but running Liev lane state with missing workspaces;
-- local-only WeCom org-scope design git repo with no remote;
+- private WeCom org-scope design repo that needs ownership/privacy decision;
 - local OpenClaw/Bondie runtime snapshots that are not on the latest package.
 
 Handle those explicitly before deleting, archiving, or handing over machines.
